@@ -1,26 +1,211 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ===============================
+   RESET BASE
+================================= */
+html,
+body {
+  width: 100%;
+  overflow-x: hidden;
+  background: #0b0b0c;
+  color: #f5f5f5;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ===============================
+   SCROLLBAR CLEAN
+================================= */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ===============================
+   ANIMAÇÕES
+================================= */
+@keyframes ctaPulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.35);
+  }
+
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 18px 6px rgba(212, 175, 55, 0.25);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.animate-cta-pulse {
+  animation: ctaPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeInUp 0.35s ease;
+}
+
+/* ===============================
+   CARDS (VIDRO PREMIUM)
+================================= */
+.glass {
+  background: linear-gradient(145deg, #121214, #0a0a0b);
+  border: 1px solid #2a2a2a;
+  border-radius: 18px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* ===============================
+   INPUT PREMIUM (AGORA REALMENTE PREMIUM)
+================================= */
+.input-premium {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #2a2a2a;
+  background: #0f0f10;
+  color: #fff;
+  font-size: 14px;
+  transition: all 0.25s ease;
+}
+
+/* placeholder mais suave */
+.input-premium::placeholder {
+  color: #6b7280;
+}
+
+/* foco elegante */
+.input-premium:focus {
+  border-color: #d4af37;
+  box-shadow:
+    0 0 0 1px #d4af37,
+    0 0 20px rgba(212, 175, 55, 0.15);
+  background: #121213;
+  outline: none;
+}
+
+/* hover sutil */
+.input-premium:hover {
+  border-color: #3a3a3a;
+}
+
+/* ===============================
+   STEP (CHECKOUT PROGRESS)
+================================= */
+.step-card {
+  background: #111;
+  border: 1px solid #2a2a2a;
+  border-radius: 16px;
+  padding: 22px;
+  transition: all 0.25s ease;
+}
+
+.step-card:hover {
+  border-color: #3a3a3a;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 500;
+}
+
+.step-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #2a2a2a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.step-number.active {
+  background: linear-gradient(135deg, #d4af37, #f1d27a);
+  color: #000;
+}
+
+/* ===============================
+   BOTÕES (CONVERSÃO REAL)
+================================= */
+.btn-primary {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #d4af37, #f1d27a);
+  color: black;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+/* hover premium */
+.btn-primary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow: 0 8px 25px rgba(212, 175, 55, 0.25);
+}
+
+/* click */
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* secundário */
+.btn-secondary {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #2a2a2a;
+  background: #111;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  border-color: #d4af37;
+  background: #141414;
+}
+
+/* ===============================
+   TIPOGRAFIA AUXILIAR
+================================= */
+.section-title {
+  font-size: 13px;
+  color: #9ca3af;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+/* ===============================
+   BADGES / CONFIANÇA
+================================= */
+.badge-secure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #9ca3af;
 }
