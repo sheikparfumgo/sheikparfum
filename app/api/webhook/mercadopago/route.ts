@@ -7,7 +7,6 @@ export async function POST(req: Request) {
 
         console.log("WEBHOOK RECEBIDO:", body)
 
-        // ✅ garante que é pagamento
         if (body.type !== "payment") {
             return NextResponse.json({ ok: true })
         }
@@ -18,7 +17,6 @@ export async function POST(req: Request) {
             return NextResponse.json({ ok: true })
         }
 
-        // 🔎 busca pagamento no MP
         const res = await fetch(
             `https://api.mercadopago.com/v1/payments/${paymentId}`,
             {
@@ -28,26 +26,47 @@ export async function POST(req: Request) {
             }
         )
 
+        if (!res.ok) {
+            console.error("Erro ao buscar pagamento MP")
+            return NextResponse.json({ ok: true })
+        }
+
         const payment = await res.json()
 
         console.log("PAYMENT DATA:", payment)
 
-        const status = payment.status
-
-        // 🔥 AJUSTE CRÍTICO AQUI
-        const rawReference = payment.external_reference
-        const orderId = rawReference?.replace("order_", "")
+        const orderId = payment.external_reference
 
         if (!orderId) {
-            console.error("order_id não encontrado no external_reference")
+            console.error("order_id não encontrado")
             return NextResponse.json({ ok: true })
         }
 
-        // 🔥 atualiza pedido
+        // 🔒 evita sobrescrever
+        const { data: existing } = await supabaseAdmin
+            .from("orders")
+            .select("status")
+            .eq("id", orderId)
+            .single()
+
+        if (existing?.status === "paid") {
+            return NextResponse.json({ ok: true })
+        }
+
+        let status = payment.status
+
+        if (status === "approved") {
+            status = "paid"
+        } else if (status === "pending" || status === "in_process") {
+            status = "pending"
+        } else {
+            status = "failed"
+        }
+
         const { error } = await supabaseAdmin
             .from("orders")
             .update({
-                status: status,
+                status,
                 mp_payment_id: payment.id
             })
             .eq("id", orderId)

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 
 import { getPerfumeBySlug, getRecommendedPerfumes } from "@/services/api"
 
@@ -20,6 +21,7 @@ export default function PerfumePage() {
 
     const params = useParams()
     const slug = params?.slug as string
+    const router = useRouter()
 
     const [recommended, setRecommended] = useState<any[]>([])
     const [perfume, setPerfume] = useState<any>(null)
@@ -56,7 +58,8 @@ export default function PerfumePage() {
                     items: [
                         {
                             size: selected?.size_ml,
-                            quantity
+                            quantity,
+                            price: selected?.price
                         }
                     ]
                 })
@@ -64,10 +67,10 @@ export default function PerfumePage() {
 
             const data = await res.json()
             setShipping(data.shipping || [])
+            const free = data.shipping?.find((s: any) => s.isFreeShipping)
             const cheapest = data.shipping?.find((s: any) => s.isCheapest)
-            if (cheapest) {
-                setSelectedShipping(cheapest)
-            }
+
+            setSelectedShipping(free || cheapest || null)
         } catch (err) {
             console.error(err)
         } finally {
@@ -235,26 +238,26 @@ export default function PerfumePage() {
     const size = Number(selected?.size_ml || 0)
     const stock = selected?.stock ?? 0
 
-    // 🚚 FRETE GRÁTIS INTELIGENTE
-    const isDecant = size <= 30
-    const isFull = size >= 100
-    const cepPrefix = cep?.slice(0, 2) || ""
+    const hasDecant = size <= 30
+    const hasFullSize = size > 30
 
-    const isCheapRegion = [
-        "01", "02", "03", "04", "05", "08", "09", "10", // SP
-        "20", "22", "24", // RJ
-        "30", "31", "32", "33" // MG
-    ].includes(cepPrefix)
+    let freeShippingRule = 0
 
-    const freeShippingRule =
-        isDecant
-            ? 150
-            : isCheapRegion
-                ? 200
-                : 300
+    if (hasDecant && hasFullSize) {
+        freeShippingRule = 0
+    } else if (hasDecant) {
+        freeShippingRule = 150
+    } else if (hasFullSize) {
+        freeShippingRule = 200
+    }
 
-    const missingForFree = Math.max(0, freeShippingRule - totalPrice)
-    const hasFreeShipping = totalPrice >= freeShippingRule
+    const hasFreeShipping =
+        freeShippingRule === 0 || totalPrice >= freeShippingRule
+
+    const missingForFree =
+        freeShippingRule === 0
+            ? 0
+            : Math.max(0, freeShippingRule - totalPrice)
 
     const MIN_INSTALLMENT = 150
 
@@ -265,7 +268,6 @@ export default function PerfumePage() {
     const totalWithCurrent = cartTotal + totalPrice
 
     const badgePerfumes = [
-        perfume,
         perfume,
         ...recommended
     ].filter(Boolean)
@@ -521,7 +523,7 @@ export default function PerfumePage() {
                         ) : (
                             <>
                                 <p className="text-xs text-zinc-400">
-                                    {isDecant ? "✨ Frete grátis em decants acima de R$150" : "👑 Frete grátis em perfumes acima de R$200"}
+                                    {hasDecant ? "✨ Frete grátis em decants acima de R$150" : "👑 Frete grátis em perfumes acima de R$200"}
                                 </p>
 
                                 <p className="text-sm text-white font-medium">
@@ -533,7 +535,10 @@ export default function PerfumePage() {
                                     <div
                                         className="h-full bg-[#d4af37] transition-all"
                                         style={{
-                                            width: `${Math.min(100, (totalPrice / freeShippingRule) * 100)}%`
+                                            width: `${freeShippingRule === 0
+                                                ? 100
+                                                : Math.min(100, (totalPrice / freeShippingRule) * 100)
+                                                }%`
                                         }}
                                     />
                                 </div>
@@ -549,11 +554,17 @@ export default function PerfumePage() {
                             Calcular frete
                         </p>
 
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
 
                             <input
                                 value={cep}
-                                onChange={(e) => setCep(e.target.value)}
+                                onChange={(e) => {
+                                    const value = e.target.value
+                                        .replace(/\D/g, "")
+                                        .replace(/^(\d{5})(\d)/, "$1-$2")
+
+                                    setCep(value)
+                                }}
                                 placeholder="Digite seu CEP"
                                 className="
                 flex-1 px-3 py-2 rounded-lg
@@ -577,165 +588,184 @@ export default function PerfumePage() {
 
                         </div>
 
-                        {loadingShipping && (
-                            <p className="text-xs text-zinc-500">
-                                Calculando...
-                            </p>
-                        )}
-                        {finalShippingList.map((s, i) => {
+                        <div className="space-y-2 mt-4 min-h-[180px] max-h-[220px] overflow-y-auto">
 
-                            const isCheapestOption = s.isCheapest
-
-                            const finalPrice =
-                                hasFreeShipping && isCheapestOption
-                                    ? 0
-                                    : s.price
-
-                            const isFreeLabel = finalPrice === 0
-
-                            return (
-                                <div
-                                    key={i}
-                                    onClick={() => {
-                                        setSelectedShipping(s)
-                                        setShippingGlobal({
-                                            ...s,
-                                            price: finalPrice
-                                        })
-                                    }}
-                                    className={`
-                p-3 rounded-lg border cursor-pointer transition-all
-
-                ${selectedShipping?.id === s.id ? "ring-2 ring-[#d4af37]" : ""}
-
-                ${s.isCheapest ? "border-green-500/40 bg-green-500/5" : ""}
-                ${s.isFastest ? "border-purple-500/40 bg-purple-500/5" : ""}
-                ${isFreeLabel ? "border-[#d4af37]/40 bg-[#d4af37]/5" : "border-zinc-800"}
-            `}
-                                >
-                                    <div className="flex justify-between items-center">
-
-                                        <div className="flex flex-col">
-
-                                            <span className="text-sm text-white font-medium">
-                                                {s.name}
-                                            </span>
-
-                                            <span className="text-xs text-zinc-400">
-                                                {s.deadline} dias
-                                            </span>
-
-                                            {/* BADGES */}
-                                            <div className="flex gap-2 mt-1">
-
-                                                {s.isCheapest && !isFreeLabel && (
-                                                    <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded">
-                                                        💰 Mais barato
-                                                    </span>
-                                                )}
-
-                                                {s.isFastest && (
-                                                    <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">
-                                                        ⚡ Mais rápido
-                                                    </span>
-                                                )}
-
-                                                {isFreeLabel && (
-                                                    <span className="text-[10px] bg-[#d4af37]/20 text-[#d4af37] px-2 py-0.5 rounded">
-                                                        👑 Frete grátis
-                                                    </span>
-                                                )}
-
-                                            </div>
-
-                                        </div>
-
-                                        <span className="text-white font-semibold">
-                                            {finalPrice === 0 ? "Grátis" : `R$ ${finalPrice.toFixed(2)}`}
-                                        </span>
-
-                                    </div>
+                            {loadingShipping && (
+                                <div className="space-y-2">
+                                    <div className="h-14 bg-zinc-800 animate-pulse rounded-lg" />
+                                    <div className="h-14 bg-zinc-800 animate-pulse rounded-lg" />
                                 </div>
-                            )
-                        })}
+                            )}
 
-                    </div>
+                            {!loadingShipping && finalShippingList.length === 0 && (
+                                <div className="h-full flex items-center justify-center text-xs text-zinc-500">
+                                    Digite seu CEP para calcular o frete 🚚
+                                </div>
+                            )}
 
-                    <div className="rounded-xl border border-zinc-800 p-3 space-y-1 mt-4">
+                            {!loadingShipping && finalShippingList.length > 0 && (
+                                <>
+                                    {finalShippingList.map((s, i) => {
 
-                        <div className="flex justify-between text-sm text-zinc-400">
-                            <span>Subtotal</span>
-                            <span>R$ {totalPrice.toFixed(2)}</span>
-                        </div>
+                                        const isCheapestOption = s.isCheapest
 
-                        <div className="flex justify-between text-sm text-zinc-400">
-                            <span>Frete</span>
-                            <span>
-                                {selectedShipping
-                                    ? (
-                                        hasFreeShipping && selectedShipping.isCheapest
-                                            ? "Grátis"
-                                            : `R$ ${selectedShipping.price.toFixed(2)}`
-                                    )
-                                    : "--"}
-                            </span>
-                        </div>
-
-                        <div className="flex justify-between text-lg font-semibold text-white border-t border-zinc-800 pt-2">
-                            <span>Total</span>
-                            <span>
-                                R$ {
-                                    (
-                                        price +
-                                        (
-                                            hasFreeShipping && selectedShipping?.isCheapest
+                                        const finalPrice =
+                                            hasFreeShipping && isCheapestOption
                                                 ? 0
-                                                : (selectedShipping?.price || 0)
+                                                : s.price
+
+                                        const isFreeLabel = finalPrice === 0
+
+                                        return (
+                                            <div
+                                                key={i}
+                                                onClick={() => {
+                                                    setSelectedShipping(s)
+                                                    setShippingGlobal({
+                                                        ...s,
+                                                        price: finalPrice
+                                                    })
+                                                }}
+                                                className={`
+                            p-2 md:p-3 rounded-lg border cursor-pointer transition-all
+                            ${selectedShipping?.id === s.id ? "ring-2 ring-[#d4af37]" : ""}
+                            ${s.isCheapest ? "border-green-500/40 bg-green-500/5" : ""}
+                            ${s.isFastest ? "border-purple-500/40 bg-purple-500/5" : ""}
+                            ${isFreeLabel ? "border-[#d4af37]/40 bg-[#d4af37]/5" : "border-zinc-800"}
+                        `}
+                                            >
+                                                <div className="flex justify-between items-center">
+
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm text-white font-medium">
+                                                            {s.name}
+                                                        </span>
+
+                                                        <span className="text-xs text-zinc-400">
+                                                            {s.deadline} dias
+                                                        </span>
+
+                                                        <div className="flex gap-2 mt-1">
+                                                            {s.isCheapest && !isFreeLabel && (
+                                                                <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded">
+                                                                    💰 Mais barato
+                                                                </span>
+                                                            )}
+
+                                                            {s.isFastest && (
+                                                                <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">
+                                                                    ⚡ Mais rápido
+                                                                </span>
+                                                            )}
+
+                                                            {isFreeLabel && (
+                                                                <span className="text-[10px] bg-[#d4af37]/20 text-[#d4af37] px-2 py-0.5 rounded">
+                                                                    👑 Frete grátis
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <span className="text-white font-semibold">
+                                                        {finalPrice === 0 ? "Grátis" : `R$ ${finalPrice.toFixed(2)}`}
+                                                    </span>
+
+                                                </div>
+                                            </div>
                                         )
-                                    ).toFixed(2)
-                                }
-                            </span>
+                                    })}
+                                </>
+                            )}
+
                         </div>
 
-                    </div>
+                        <div className="rounded-xl border border-zinc-800 p-3 space-y-1 mt-4">
 
-                    {/* BOTÕES */}
-                    <div className="flex flex-col md:flex-row gap-3">
+                            <div className="flex justify-between text-sm text-zinc-400">
+                                <span>Subtotal</span>
+                                <span>R$ {totalPrice.toFixed(2)}</span>
+                            </div>
 
-                        {selected?.in_stock ? (
-                            <>
-                                <button
-                                    onClick={() => {
-                                        if (!selected) return
+                            <div className="flex justify-between text-sm text-zinc-400">
+                                <span>Frete</span>
+                                <span>
+                                    {selectedShipping
+                                        ? (
+                                            hasFreeShipping && selectedShipping.isCheapest
+                                                ? "Grátis"
+                                                : `R$ ${selectedShipping.price.toFixed(2)}`
+                                        )
+                                        : "--"}
+                                </span>
+                            </div>
 
-                                        const unitPrice = Number(selected.price)
+                            <div className="flex justify-between text-lg font-semibold text-white border-t border-zinc-800 pt-2">
+                                <span>Total</span>
+                                <span>
+                                    R$ {
+                                        (
+                                            price +
+                                            (
+                                                hasFreeShipping && selectedShipping?.isCheapest
+                                                    ? 0
+                                                    : (selectedShipping?.price || 0)
+                                            )
+                                        ).toFixed(2)
+                                    }
+                                </span>
+                            </div>
 
-                                        addToCart({
-                                            id: `${perfume.perfume_id}-${selected.size_ml}`,
-                                            name: perfume.perfume_name,
-                                            price: unitPrice,
-                                            quantity: quantity,
-                                            image:
-                                                selectedImage ||
-                                                perfume.image_main ||
-                                                "/placeholder.png",
-                                            size: selected.size_ml
-                                        })
-                                    }}
-                                    className="flex-1 border border-zinc-700 py-3 rounded-lg transition hover:bg-white hover:text-black"
-                                >
-                                    Adicionar ao carrinho
-                                </button>
+                        </div>
 
-                                <button
-                                    onClick={() => {
-                                        console.log("comprar", {
-                                            perfume: perfume.perfume_name,
-                                            size,
-                                            quantity
-                                        })
-                                    }}
-                                    className={`
+                        {/* BOTÕES */}
+                        <div className="flex flex-col md:flex-row gap-3">
+
+                            {selected?.in_stock ? (
+                                <>
+                                    <button
+                                        onClick={() => {
+                                            if (!selected) return
+
+                                            const unitPrice = Number(selected.price)
+
+                                            addToCart({
+                                                id: `${perfume.perfume_id}-${selected.size_ml}`,
+                                                name: perfume.perfume_name,
+                                                price: unitPrice,
+                                                quantity: quantity,
+                                                image:
+                                                    selectedImage ||
+                                                    perfume.image_main ||
+                                                    "/placeholder.png",
+                                                size: selected.size_ml
+                                            })
+                                        }}
+                                        className="flex-1 border border-zinc-700 py-3 rounded-lg transition hover:bg-white hover:text-black"
+                                    >
+                                        Adicionar ao carrinho
+                                    </button>
+
+                                    <button
+                                        onClick={() => {
+                                            if (!selected) return
+
+                                            const unitPrice = Number(selected.price)
+
+                                            addToCart({
+                                                id: `${perfume.perfume_id}-${selected.size_ml}`,
+                                                name: perfume.perfume_name,
+                                                price: unitPrice,
+                                                quantity,
+                                                image:
+                                                    selectedImage ||
+                                                    perfume.image_main ||
+                                                    "/placeholder.png",
+                                                size: selected.size_ml
+                                            })
+
+                                            router.push("/checkout")
+                                        }}
+                                        className={`
         flex-1 bg-[#d4af37] text-black py-3 rounded-lg font-semibold
         transition
         shadow-lg shadow-[#d4af37]/20
@@ -744,25 +774,26 @@ export default function PerfumePage() {
 
         ${stock <= 3 ? "animate-cta-pulse" : ""}
     `}
+                                    >
+                                        Comprar agora
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    onClick={() => setShowNotifyModal(true)}
+                                    className="w-full border border-[#d4af37] text-[#d4af37] py-3 rounded-lg font-semibold hover:bg-[#d4af37] hover:text-black transition"
                                 >
-                                    Comprar agora
+                                    Avise-me quando chegar
                                 </button>
-                            </>
-                        ) : (
-                            <button
-                                onClick={() => setShowNotifyModal(true)}
-                                className="w-full border border-[#d4af37] text-[#d4af37] py-3 rounded-lg font-semibold hover:bg-[#d4af37] hover:text-black transition"
-                            >
-                                Avise-me quando chegar
-                            </button>
-                        )}
+                            )}
+
+                        </div>
 
                     </div>
 
                 </div>
 
             </div>
-
             {/* PIRÂMIDE */}
             <div className="max-w-[1200px] mx-auto mt-16 space-y-6">
 
@@ -874,6 +905,6 @@ export default function PerfumePage() {
                 perfumeName={perfume.perfume_name}
             />
             <RecentPurchaseBadge perfumes={badgePerfumes} />
-        </div >
+        </div>
     )
 }

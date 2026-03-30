@@ -57,26 +57,28 @@ export async function POST(req: Request) {
             0
         )
 
-        const hasOnlyDecants = (items || []).every(
+        const hasDecant = (items || []).some(
             (item: any) => item.size <= 30
         )
 
-        const cepPrefix = cleanCep.slice(0, 2)
+        const hasFullSize = (items || []).some(
+            (item: any) => item.size > 30
+        )
 
-        const isCheapRegion = [
-            "01", "02", "03", "04", "05", "08", "09", "10",
-            "20", "22", "24",
-            "30", "31", "32", "33"
-        ].includes(cepPrefix)
+        let freeShippingRule = Infinity
+        let isFreeShipping = false
 
-        const freeShippingRule =
-            hasOnlyDecants
-                ? 150
-                : isCheapRegion
-                    ? 200
-                    : 300
-
-        const isFreeShipping = totalValue >= freeShippingRule
+        // 🔥 REGRA FINAL
+        if (hasDecant && hasFullSize) {
+            isFreeShipping = true
+            freeShippingRule = 0
+        } else if (hasDecant) {
+            freeShippingRule = 150
+            isFreeShipping = totalValue >= 150
+        } else if (hasFullSize) {
+            freeShippingRule = 200
+            isFreeShipping = totalValue >= 200
+        }
 
         console.log("TOKEN:", process.env.MELHOR_ENVIO_TOKEN)
 

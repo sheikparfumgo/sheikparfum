@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useCart } from "@/store/cart"
+import { useRouter } from "next/navigation"
 import { initMercadoPago } from "@mercadopago/sdk-react"
 import { CardPayment } from "@mercadopago/sdk-react"
 
@@ -11,6 +12,9 @@ export default function CheckoutPage() {
         initMercadoPago("TEST-5a159cae-c246-4771-a4e6-eba136843219")
     }, [])
 
+    const router = useRouter()
+
+    const [timeLeft, setTimeLeft] = useState(0)
     const items = useCart((s) => s.items)
     const total = useCart((s) => s.getTotalWithShipping())
     const safeTotal = Math.round(Number(total) * 100) / 100
@@ -46,6 +50,34 @@ export default function CheckoutPage() {
     })
 
     useEffect(() => {
+        const STORAGE_KEY = "checkout_timer_session"
+
+        let endTime = sessionStorage.getItem(STORAGE_KEY)
+
+        if (!endTime) {
+            // 🔥 novo acesso → cria novo timer (10 min)
+            const newEnd = Date.now() + 10 * 60 * 1000
+            sessionStorage.setItem(STORAGE_KEY, String(newEnd))
+            endTime = String(newEnd)
+        }
+
+        const updateTimer = () => {
+            const remaining = Math.max(
+                0,
+                Math.floor((Number(endTime) - Date.now()) / 1000)
+            )
+
+            setTimeLeft(remaining)
+        }
+
+        updateTimer()
+
+        const interval = setInterval(updateTimer, 1000)
+
+        return () => clearInterval(interval)
+    }, [])
+
+    useEffect(() => {
         if (savedAddress?.cep && !address.cep) {
             handleCep(savedAddress.cep)
         }
@@ -63,6 +95,20 @@ export default function CheckoutPage() {
             })
         }
     }, [savedAddress])
+
+    function formatTime(seconds: number) {
+        const min = Math.floor(seconds / 60)
+        const sec = seconds % 60
+        return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`
+    }
+
+    function getTimerColor() {
+        if (timeLeft > 300) return "green"
+        if (timeLeft > 120) return "orange"
+        return "red"
+    }
+
+    const color = getTimerColor()
 
     async function createOrder(paymentMethod: string) {
         // 🔒 evita criar pedido duplicado
@@ -114,7 +160,9 @@ export default function CheckoutPage() {
                     amount: safeTotal,
                     payment_method_id: "pix",
                     cpf: user.cpf,
-                    email: user.email
+                    email: user.email,
+                    first_name: user.name.split(" ")[0],
+                    last_name: user.name.split(" ").slice(1).join(" ") || "Cliente"
                 })
             })
 
@@ -125,6 +173,8 @@ export default function CheckoutPage() {
             }
 
             setPixData(data)
+            // 🔥 redireciona após gerar PIX
+            router.push(`/success?order_id=${id}`)
 
         } catch (err: any) {
             setError(err.message)
@@ -223,9 +273,10 @@ export default function CheckoutPage() {
 
         if (loading) {
             return (
-                <p className="text-xs text-zinc-500 animate-pulse">
-                    Calculando frete...
-                </p>
+                <div className="space-y-2">
+                    <div className="h-14 bg-zinc-800 animate-pulse rounded-lg" />
+                    <div className="h-14 bg-zinc-800 animate-pulse rounded-lg" />
+                </div>
             )
         }
 
@@ -244,6 +295,8 @@ export default function CheckoutPage() {
             .slice(0, 2)
 
         const finalList = [...curated, ...others]
+
+
 
         return (
             <div className="space-y-2">
@@ -312,16 +365,57 @@ export default function CheckoutPage() {
 
 
     return (
-        <div className="max-w-6xl mx-auto px-4 py-8 grid lg:grid-cols-[1.2fr_0.8fr] gap-8">
+        <div className="max-w-6xl mx-auto px-4 py-6 lg:py-8 grid lg:grid-cols-[1.2fr_0.8fr] gap-6 lg:gap-8">
 
             {/* ESQUERDA */}
             <div className="space-y-6">
 
-                <div>
-                    <h1 className="text-2xl font-bold">Finalizar compra</h1>
-                    <p className="text-sm text-zinc-400">
-                        Preencha seus dados para concluir seu pedido
-                    </p>
+                <div className="space-y-3">
+
+                    {/* 🔥 TIMER TOP (URGÊNCIA MÁXIMA) */}
+                    <div
+                        className={`
+            flex items-center justify-between
+            px-4 py-2 rounded-lg border
+            text-sm font-medium
+            transition-all
+
+            ${color === "green" && "bg-green-500/10 border-green-500/30 text-green-400"}
+            ${color === "orange" && "bg-orange-500/10 border-orange-500/30 text-orange-400"}
+            ${color === "red" && "bg-red-500/10 border-red-500/30 text-red-400 animate-pulse"}
+        `}
+                    >
+                        <span>
+                            🔒 Pedido reservado por tempo limitado
+                        </span>
+
+                        <span className="font-bold text-base">
+                            {formatTime(timeLeft)}
+                        </span>
+                    </div>
+
+                    <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+                        <div
+                            className={`
+            h-full transition-all duration-1000
+            ${color === "green" && "bg-green-500"}
+            ${color === "orange" && "bg-orange-500"}
+            ${color === "red" && "bg-red-500"}
+        `}
+                            style={{
+                                width: `${(timeLeft / (10 * 60)) * 100}%`
+                            }}
+                        />
+                    </div>
+
+                    {/* 👇 TÍTULO */}
+                    <div>
+                        <h1 className="text-xl md:text-2xl font-bold">Finalizar compra</h1>
+                        <p className="text-sm text-zinc-400">
+                            Preencha seus dados para concluir seu pedido
+                        </p>
+                    </div>
+
                 </div>
 
                 {/* STEPS */}
@@ -337,7 +431,7 @@ export default function CheckoutPage() {
                 <Card>
                     <SectionTitle title="Seus dados" />
 
-                    <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                         <Input
                             value={user.name}
@@ -434,7 +528,7 @@ export default function CheckoutPage() {
                     />
 
                     {/* LINHA DUPLA */}
-                    <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
                             placeholder="Cidade"
                             value={address.city}
@@ -474,38 +568,40 @@ export default function CheckoutPage() {
                         }}
                     />
 
-                    {shipping ? (
-                        // ✅ FRETE SELECIONADO
-                        <div className="p-3 rounded-lg border border-[#d4af37] flex justify-between items-center">
-                            <div>
-                                <p className="text-sm font-medium">
-                                    🚚 {shipping.name}
-                                </p>
-                                <p className="text-xs text-zinc-400">
-                                    {shipping.deadline} dias úteis
-                                </p>
+                    <div className="min-h-[280px] transition-all duration-300">
+                        {shipping ? (
+                            // ✅ FRETE SELECIONADO
+                            <div className="p-3 md:p-4 rounded-lg border border-[#d4af37] flex justify-between items-center">
+                                <div>
+                                    <p className="text-sm font-medium">
+                                        🚚 {shipping.name}
+                                    </p>
+                                    <p className="text-xs text-zinc-400">
+                                        {shipping.deadline} dias úteis
+                                    </p>
+                                </div>
+
+                                <div className="text-right">
+                                    <p className="text-sm font-semibold text-[#d4af37]">
+                                        {shipping.price === 0
+                                            ? "Grátis"
+                                            : `R$ ${Number(shipping.price).toFixed(2)}`}
+                                    </p>
+
+                                    <button
+                                        onClick={() => useCart.getState().setShipping(null)}
+                                        className="text-xs text-zinc-500 hover:text-white mt-1"
+                                    >
+                                        alterar
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="text-right">
-                                <p className="text-sm font-semibold text-[#d4af37]">
-                                    {shipping.price === 0
-                                        ? "Grátis"
-                                        : `R$ ${Number(shipping.price).toFixed(2)}`}
-                                </p>
-
-                                <button
-                                    onClick={() => useCart.getState().setShipping(null)}
-                                    className="text-xs text-zinc-500 hover:text-white mt-1"
-                                >
-                                    alterar
-                                </button>
-                            </div>
-                        </div>
-
-                    ) : (
-                        // 🚀 LISTA INTELIGENTE (CURADA)
-                        <ShippingSelector cep={address.cep} items={items} />
-                    )}
+                        ) : (
+                            // 🚀 LISTA INTELIGENTE (CURADA)
+                            <ShippingSelector cep={address.cep} items={items} />
+                        )}
+                    </div>
                     {step === 2 && (
                         <PrimaryButton
                             onClick={() => setStep(3)}
@@ -567,7 +663,11 @@ export default function CheckoutPage() {
                                 initialization={{
                                     amount: safeTotal,
                                     payer: {
-                                        email: user.email
+                                        email: user.email,
+                                        identification: {
+                                            type: "CPF",
+                                            number: user.cpf
+                                        }
                                     }
                                 }}
                                 customization={{
@@ -613,7 +713,7 @@ export default function CheckoutPage() {
                                         }
 
                                         if (result.status === "approved") {
-                                            alert("Pagamento aprovado 🎉")
+                                            router.push(`/success?order_id=${id}`)
                                         } else if (result.status === "pending") {
                                             alert("Pagamento pendente ⏳")
                                         } else {
@@ -696,10 +796,10 @@ export default function CheckoutPage() {
                 </Card>
 
                 {/* BADGES (AGORA CERTO) */}
-                <div className="flex justify-center">
+                <div className="w-full">
                     <img
                         src="/images/badges/badges.png"
-                        className="w-[260px] md:w-[320px] lg:w-[380px] object-contain opacity-90"
+                        className="w-full max-w-[420px] mx-auto object-contain"
                     />
                 </div>
 
