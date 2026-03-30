@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 
+export const runtime = "nodejs"
+
 export async function POST(req: Request) {
     try {
         const { cep, items } = await req.json()
@@ -76,9 +78,8 @@ export async function POST(req: Request) {
 
         const isFreeShipping = totalValue >= freeShippingRule
 
-        // ==============================
-        // 🚚 3. MELHOR ENVIO
-        // ==============================
+        console.log("TOKEN:", process.env.MELHOR_ENVIO_TOKEN)
+
         const response = await fetch(
             "https://www.melhorenvio.com.br/api/v2/me/shipment/calculate",
             {
@@ -86,8 +87,7 @@ export async function POST(req: Request) {
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${process.env.MELHOR_ENVIO_TOKEN}`,
-                    "Accept": "application/json",
-                    "User-Agent": "SheikParfum (contato@sheikparfum.com)"
+                    "Accept": "application/json"
                 },
                 body: JSON.stringify({
                     from: { postal_code: "74630160" },
@@ -111,7 +111,16 @@ export async function POST(req: Request) {
             }
         )
 
-        const data = await response.json()
+        let data
+
+        try {
+            data = await response.json()
+        } catch {
+            data = await response.text()
+        }
+
+        console.log("STATUS:", response.status)
+        console.log("RESPONSE:", data)
 
         if (!response.ok) {
             return NextResponse.json(
