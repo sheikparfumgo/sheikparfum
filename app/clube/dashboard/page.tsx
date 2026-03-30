@@ -11,7 +11,6 @@ type Perfume = {
     brand: string
     image: string
     hype?: boolean
-    level?: number
 }
 
 export default function ClubeDashboard() {

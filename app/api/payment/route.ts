@@ -29,7 +29,7 @@ export async function POST(req: Request) {
             },
 
             // 🔥 ESSENCIAL
-            external_reference: order_id
+            external_reference: body.order_id
         }
 
         if (!isPix) {
