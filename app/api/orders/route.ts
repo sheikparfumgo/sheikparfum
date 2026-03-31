@@ -28,7 +28,7 @@ export async function POST(req: Request) {
                     shipping: body.shipping || {},
                     payment_method: body.payment_method || "unknown",
                     status: "pending",
-                    items: body.items // Snapshot completo
+                    items_json: body.items // Snapshot completo em items_json
                 }
             ])
             .select()

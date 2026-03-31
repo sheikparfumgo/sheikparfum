@@ -19,9 +19,9 @@ export default function OrderPage() {
 
             if (!res.ok) throw new Error()
 
-            data.items = typeof data.items === "string"
-                ? JSON.parse(data.items)
-                : data.items
+            data.items = typeof data.items_json === "string"
+                ? JSON.parse(data.items_json)
+                : data.items_json
 
             setOrder(data)
 

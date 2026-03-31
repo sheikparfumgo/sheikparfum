@@ -77,7 +77,7 @@ export async function GET(req: Request) {
         const normalized = data.map((items: any) => ({
             ...items,
             products: Array.isArray(items.products) ? items.products : [],
-            has_stock: items.in_stock === true || items.in_stock === "true"
+            has_stock: items.has_stock ?? (items.in_stock === true || items.in_stock === "true" || (items.stock > 0))
         }))
 
         return NextResponse.json(normalized)

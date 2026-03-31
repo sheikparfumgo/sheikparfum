@@ -899,7 +899,7 @@ export default function CheckoutPage() {
                 <div className="w-full pt-4 overflow-hidden">
                     <img
                         src="/images/badges/badges.png"
-                        className="w-full scale-[2.2] origin-top object-contain filter drop-shadow-2xl mb-8"
+                        className="w-full h-auto scale-[2.2] origin-top object-contain filter drop-shadow-2xl mb-8"
                         alt="Auditoria e Segurança"
                     />
                 </div>
