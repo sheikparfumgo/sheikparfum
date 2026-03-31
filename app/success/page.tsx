@@ -118,7 +118,7 @@ export default function SuccessPage() {
                     <div className="flex justify-between text-sm text-zinc-400">
                         <span>Itens ({totalItems})</span>
                         <span>
-                            R$ {order?.amount?.toFixed(2)}
+                            R$ (order?.amount || 0).toFixed(2)
                         </span>
                     </div>
 

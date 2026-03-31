@@ -6,19 +6,18 @@ export async function GET(
     context: { params: Promise<{ id: string }> }
 ) {
     try {
-        // 🔥 NOVO PADRÃO NEXT 16
         const { id } = await context.params
 
-        if (!id) {
+        if (!id || typeof id !== "string") {
             return NextResponse.json(
-                { error: "ID do pedido não informado" },
+                { error: "ID inválido" },
                 { status: 400 }
             )
         }
 
         const { data, error } = await supabaseAdmin
             .from("orders")
-            .select("*")
+            .select("id, status, total, items, created_at")
             .eq("id", id)
             .single()
 
@@ -32,7 +31,9 @@ export async function GET(
         return NextResponse.json(data)
 
     } catch (err) {
-        console.error("Erro API order:", err)
+        console.error("Erro API order:", {
+            error: err
+        })
 
         return NextResponse.json(
             { error: "Erro interno" },
