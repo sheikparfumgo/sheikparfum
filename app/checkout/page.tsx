@@ -149,7 +149,8 @@ export default function CheckoutPage() {
             setLoading(true)
             setError("")
 
-            // 🔥 1. cria pedido
+            const cleanCpf = user.cpf.replace(/\D/g, "")
+
             const id = await createOrder("pix")
 
             // 🔥 2. chama pagamento COM order_id
@@ -160,7 +161,7 @@ export default function CheckoutPage() {
                     order_id: id,
                     amount: safeTotal,
                     payment_method_id: "pix",
-                    cpf: user.cpf,
+                    cpf: cleanCpf,
                     email: user.email,
                     first_name: user.name.split(" ")[0],
                     last_name: user.name.split(" ").slice(1).join(" ") || "Cliente"
@@ -438,7 +439,7 @@ export default function CheckoutPage() {
                             onChange={(e: any) =>
                                 setUser({ ...user, name: e.target.value })
                             }
-                            placeholder="Nome completo"
+                            placeholder="Nome e sobrenome"
                         />
 
                         <Input
@@ -447,30 +448,69 @@ export default function CheckoutPage() {
                                 setUser({ ...user, email: e.target.value })
                             }
                             placeholder="Email"
+                            type="email"
                         />
 
                         <Input
                             value={user.phone}
-                            onChange={(e: any) =>
-                                setUser({ ...user, phone: e.target.value })
-                            }
-                            placeholder="Telefone"
+                            onChange={(e: any) => {
+                                let val = e.target.value.replace(/\D/g, "")
+                                if (val.length > 11) val = val.substring(0, 11)
+                                if (val.length > 2) val = val.replace(/^(\d{2})(\d)/g, "($1) $2")
+                                if (val.length > 9) val = val.replace(/(\d{5})(\d)/, "$1-$2")
+                                else if (val.length > 8) val = val.replace(/(\d{4})(\d)/, "$1-$2")
+                                setUser({ ...user, phone: val })
+                            }}
+                            placeholder="Celular com DDD"
+                            maxLength={15}
                         />
 
                         <Input
                             value={user.cpf}
-                            onChange={(e: any) =>
-                                setUser({ ...user, cpf: e.target.value })
-                            }
+                            onChange={(e: any) => {
+                                let val = e.target.value.replace(/\D/g, "")
+                                if (val.length > 11) val = val.substring(0, 11)
+                                val = val.replace(/(\d{3})(\d)/, "$1.$2")
+                                val = val.replace(/(\d{3})(\d)/, "$1.$2")
+                                val = val.replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+                                setUser({ ...user, cpf: val })
+                            }}
                             placeholder="CPF"
+                            maxLength={14}
                         />
 
                     </div>
 
                     {step === 1 && (
-                        <PrimaryButton onClick={() => setStep(2)}>
-                            Continuar para entrega
-                        </PrimaryButton>
+                        <div className="space-y-4 pt-2">
+                            {error && step === 1 && (
+                                <p className="text-red-400 text-sm font-medium">{error}</p>
+                            )}
+                            <PrimaryButton onClick={() => {
+                                // Validações básicas
+                                if (!user.name.trim().includes(" ")) {
+                                    setError("Por favor, informe seu nome e sobrenome")
+                                    return
+                                }
+                                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) {
+                                    setError("Por favor, insira um email válido")
+                                    return
+                                }
+                                if (user.phone.replace(/\D/g, "").length < 10) {
+                                    setError("Por favor, insira um número de celular válido")
+                                    return
+                                }
+                                if (user.cpf.replace(/\D/g, "").length !== 11) {
+                                    setError("Por favor, insira um CPF válido com 11 dígitos")
+                                    return
+                                }
+                                
+                                setError("")
+                                setStep(2)
+                            }}>
+                                Continuar para entrega
+                            </PrimaryButton>
+                        </div>
                     )}
                 </Card>
 
@@ -722,7 +762,7 @@ export default function CheckoutPage() {
                                                     email: user.email,
                                                     identification: {
                                                         type: "CPF",
-                                                        number: user.cpf
+                                                        number: user.cpf.replace(/\D/g, "")
                                                     }
                                                 }
                                             }}
@@ -756,7 +796,7 @@ export default function CheckoutPage() {
                                                             installments: data.installments,
                                                             issuer_id: data.issuer_id || undefined,
                                                             email: user.email,
-                                                            cpf: user.cpf,
+                                                            cpf: user.cpf.replace(/\D/g, ""),
                                                             amount: safeTotal
                                                         })
                                                     })
@@ -856,7 +896,7 @@ export default function CheckoutPage() {
                 </Card>
 
                 {/* BADGES (AGORA CERTO) */}
-                <div className="glass rounded-xl p-5 border border-[#2a2a2a] flex items-center justify-center">
+                <div className="w-full">
                     <img
                         src="/images/badges/badges.png"
                         className="w-full object-contain"
