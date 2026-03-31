@@ -13,6 +13,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Dados do usuário inválidos" }, { status: 400 })
         }
 
+        console.log("Iniciando criação de pedido para:", body.user.email);
+
+        const cleanCpf = body.user.cpf.replace(/\D/g, "");
+
         const { data: order, error: orderError } = await supabaseAdmin
             .from("orders")
             .insert([
@@ -20,7 +24,7 @@ export async function POST(req: Request) {
                     amount: Number(body.amount),
                     customer_name: body.user.name,
                     customer_email: body.user.email,
-                    customer_cpf: body.user.cpf,
+                    customer_cpf: cleanCpf,
                     shipping: body.shipping || {},
                     payment_method: body.payment_method || "unknown",
                     status: "pending"
@@ -29,16 +33,20 @@ export async function POST(req: Request) {
             .select()
             .single()
 
-        if (orderError) throw orderError
+        if (orderError) {
+            console.error("Erro ao criar pedido (Supabase):", orderError);
+            return NextResponse.json({ 
+                error: "Erro no banco ao criar pedido", 
+                details: orderError.message 
+            }, { status: 500 });
+        }
 
         const itemsToInsert = body.items.map((item: any) => {
             // O ID no frontend vem como "uuid-50" (ex: 123e4567-e89b-12d3-a456-426614174000-50)
-            // Se for string e tiver mais de 36 caracteres, pegamos os primeiros 36
             let rawId = item.product_id || item.id;
             
             if (typeof rawId === "string" && rawId.length > 36) {
-                // Remove o sufixo "-[tamanho]" para extrair apenas o UUID correto
-                rawId = rawId.substring(0, 36); 
+                rawId = rawId.split('-').slice(0, 5).join('-'); 
             }
 
             return {
@@ -54,23 +62,27 @@ export async function POST(req: Request) {
             .insert(itemsToInsert)
 
         if (itemsError) {
+            console.error("Erro ao inserir itens (Supabase):", itemsError);
             await supabaseAdmin
                 .from("orders")
                 .delete()
                 .eq("id", order.id)
 
-            throw itemsError
+            return NextResponse.json({ 
+                error: "Erro no banco ao inserir itens", 
+                details: itemsError.message 
+            }, { status: 500 });
         }
 
         return NextResponse.json({
-            id: order.id, // 🔥 importante pro frontend
+            id: order.id, 
             status: order.status
         })
 
-    } catch (err) {
-        console.error(err)
+    } catch (err: any) {
+        console.error("ERRO GERAL API ORDERS:", err)
         return NextResponse.json(
-            { error: "Erro ao criar pedido" },
+            { error: "Erro interno ao processar pedido", details: err.message },
             { status: 500 }
         )
     }

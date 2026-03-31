@@ -132,7 +132,7 @@ export default function CheckoutPage() {
         const data = await res.json()
 
         if (!res.ok) {
-            throw new Error(data.error || "Erro ao criar pedido")
+            throw new Error(data.details || data.error || "Erro ao criar pedido")
         }
 
         setOrderId(data.id)
@@ -171,7 +171,7 @@ export default function CheckoutPage() {
             const data = await res.json()
 
             if (!res.ok) {
-                throw new Error(data.error || "Erro ao gerar PIX")
+                throw new Error(data.details || data.error || "Erro ao gerar PIX")
             }
 
             setPixData(data)
@@ -895,11 +895,11 @@ export default function CheckoutPage() {
                     </div>
                 </Card>
 
-                {/* BADGES (AGORA CERTO) */}
-                <div className="w-full">
+                {/* BADGES (AGORA GIGANTE) */}
+                <div className="w-full pt-2">
                     <img
                         src="/images/badges/badges.png"
-                        className="w-full object-contain"
+                        className="w-full scale-110 origin-top object-contain filter drop-shadow-2xl"
                         alt="Auditoria e Segurança"
                     />
                 </div>
