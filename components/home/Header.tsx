@@ -4,6 +4,7 @@ import { Search, ShoppingCart, User, Menu, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import Sidebar from "@/components/home/Sidebar"
 import { useCart } from "@/store/cart"
+import { supabase } from "@/lib/supabase/client"
 
 export default function Header() {
 
@@ -16,13 +17,28 @@ export default function Header() {
     const searchRef = useRef<HTMLDivElement>(null)
     const cartRef = useRef<HTMLDivElement>(null)
 
-    const loggedUser = {
-        name: "Jennifer",
-        avatar: "https://i.pravatar.cc/40"
-    }
+    const [user, setUser] = useState<any>(null)
+
     const updateQuantity = useCart((state) => state.updateQuantity)
     const removeItem = useCart((state) => state.removeItem)
     const items = useCart((state) => state.items)
+
+    useEffect(() => {
+        async function getUser() {
+            const { data } = await supabase.auth.getUser()
+            setUser(data.user)
+        }
+
+        getUser()
+
+        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null)
+        })
+
+        return () => {
+            listener.subscription.unsubscribe()
+        }
+    }, [])
 
     useEffect(() => {
 
@@ -317,7 +333,7 @@ export default function Header() {
 
                     {/* USUÁRIO LOGADO */}
 
-                    {loggedUser ? (
+                    {user ? (
 
                         <div
                             className="
@@ -334,12 +350,12 @@ export default function Header() {
                         >
 
                             <img
-                                src={loggedUser.avatar}
+                                src={user.user_metadata?.avatar_url}
                                 className="w-7 h-7 rounded-full"
                             />
 
                             <span className="text-sm text-gray-300 pr-2">
-                                {loggedUser.name}
+                                {user.user_metadata?.full_name || user.email}
                             </span>
 
                         </div>
@@ -347,19 +363,20 @@ export default function Header() {
                     ) : (
 
                         <button
+                            onClick={() => window.location.href = "/login"}
                             className="
-              hidden md:flex
-              items-center
-              px-6 py-2.5
-              rounded-full
-              font-semibold
-              text-black
-              bg-gradient-to-r from-[#c9a34a] to-[#e0b95b]
-              shadow-lg shadow-[#c9a34a]/20
-              hover:scale-105
-              hover:shadow-[#c9a34a]/40
-              transition
-            "
+    hidden md:flex
+    items-center
+    px-6 py-2.5
+    rounded-full
+    font-semibold
+    text-black
+    bg-gradient-to-r from-[#c9a34a] to-[#e0b95b]
+    shadow-lg shadow-[#c9a34a]/20
+    hover:scale-105
+    hover:shadow-[#c9a34a]/40
+    transition
+  "
                         >
                             Login / Cadastrar
                         </button>
@@ -368,7 +385,7 @@ export default function Header() {
 
                     {/* Mobile login */}
 
-                    {loggedUser ? (
+                    {user ? (
 
                         <button
                             className="
@@ -382,7 +399,7 @@ export default function Header() {
   "
                         >
                             <img
-                                src={loggedUser.avatar}
+                                src={user.user_metadata?.avatar_url || "/default-avatar.png"}
                                 alt="avatar"
                                 className="w-8 h-8 rounded-full"
                             />
@@ -391,6 +408,7 @@ export default function Header() {
                     ) : (
 
                         <button
+                            onClick={() => window.location.href = "/login"}
                             className="
     md:hidden
     w-10 h-10
