@@ -24,6 +24,7 @@ export default function CheckoutPage() {
     const [loading, setLoading] = useState(false)
     const [pixData, setPixData] = useState<any>(null)
     const [error, setError] = useState("")
+    const [selectedPayment, setSelectedPayment] = useState<"pix" | "card" | null>(null)
 
     const savedAddress = useCart((s) => s.address)
     const setAddressGlobal = useCart((s) => s.setAddress)
@@ -173,9 +174,8 @@ export default function CheckoutPage() {
             }
 
             setPixData(data)
-            // 🔥 redireciona após gerar PIX
-            router.push(`/success?order_id=${id}`)
-
+            // 🔥 Removido o redirecionamento automático para o usuário poder ler o QR code
+            
         } catch (err: any) {
             setError(err.message)
         } finally {
@@ -621,118 +621,178 @@ export default function CheckoutPage() {
                     <Card>
                         <SectionTitle title="Pagamento" />
 
-                        <PrimaryButton
-                            onClick={handlePix}
-                            disabled={loading || !user.email || !user.cpf || !user.name}
-                        >
-                            {loading ? "Gerando PIX..." : "Pagar com PIX"}
-                        </PrimaryButton>
+                        <div className="flex flex-col md:flex-row gap-3 mt-4 mb-6">
+                            <button
+                                onClick={() => setSelectedPayment("pix")}
+                                className={`flex-1 py-3 rounded-xl border transition-all text-sm font-semibold flex items-center justify-center gap-2 ${selectedPayment === "pix"
+                                        ? "border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]"
+                                        : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                                    }`}
+                            >
+                                ⚡ PIX (Aprovação rápida)
+                            </button>
+                            <button
+                                onClick={() => setSelectedPayment("card")}
+                                className={`flex-1 py-3 rounded-xl border transition-all text-sm font-semibold flex items-center justify-center gap-2 ${selectedPayment === "card"
+                                        ? "border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]"
+                                        : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                                    }`}
+                            >
+                                💳 Cartão de Crédito
+                            </button>
+                        </div>
 
                         {error && (
-                            <p className="text-red-400 text-sm">{error}</p>
+                            <p className="text-red-400 text-sm mb-4">{error}</p>
                         )}
-
-                        {/* QR CODE */}
-                        {pixData?.qr_code_base64 && (
-                            <div className="bg-white rounded-lg p-4 text-center">
-                                <img
-                                    src={`data:image/png;base64,${pixData.qr_code_base64}`}
-                                    className="mx-auto w-44"
-                                />
-
-                                <p className="text-xs text-black mt-2">
-                                    Escaneie para pagar
-                                </p>
-                            </div>
-                        )}
-
-                        <p className="text-xs text-zinc-400">
-                            {getInstallmentLimit(items, safeTotal) > 1
-                                ? `Parcele em até ${getInstallmentLimit(items, safeTotal)}x sem juros`
-                                : "Pagamento à vista"}
-                        </p>
-
+                        
                         {(!user.email || !user.cpf || !user.name) && (
-                            <p className="text-xs text-red-400">
+                            <p className="text-xs text-red-400 mb-4">
                                 Preencha seus dados para liberar o pagamento
                             </p>
                         )}
 
-                        <div className="mt-4">
-                            <CardPayment
-                                initialization={{
-                                    amount: safeTotal,
-                                    payer: {
-                                        email: user.email,
-                                        identification: {
-                                            type: "CPF",
-                                            number: user.cpf
-                                        }
-                                    }
-                                }}
-                                customization={{
-                                    paymentMethods: {
-                                        minInstallments: 1,
-                                        maxInstallments: maxInstallments
-                                    }
-                                }}
-                                onSubmit={async (data) => {
-                                    try {
-                                        if (!user.email || !user.cpf || !user.name) {
-                                            setError("Preencha seus dados antes de pagar")
-                                            return
-                                        }
+                        {selectedPayment === "pix" && (
+                            <div className="space-y-4 animate-fade-in">
+                                {!pixData ? (
+                                    <PrimaryButton
+                                        onClick={handlePix}
+                                        disabled={loading || !user.email || !user.cpf || !user.name}
+                                    >
+                                        {loading ? "Gerando PIX..." : "Gerar PIX e Finalizar"}
+                                    </PrimaryButton>
+                                ) : (
+                                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 text-center space-y-4">
+                                        <p className="text-sm font-semibold text-white">
+                                            Seu QR Code foi gerado!
+                                        </p>
+                                        
+                                        <div className="bg-white rounded-xl inline-block p-4">
+                                            <img
+                                                src={`data:image/png;base64,${pixData.qr_code_base64}`}
+                                                className="w-44 h-44 object-contain"
+                                                alt="QR Code PIX"
+                                            />
+                                        </div>
 
-                                        setLoading(true)
-                                        setError("")
+                                        <p className="text-xs text-zinc-400">
+                                            Abra o app do seu banco e escaneie o código acima ou copie o código PIX:
+                                        </p>
+                                        
+                                        <div className="bg-zinc-950 p-3 rounded-lg flex items-center justify-between border border-zinc-800">
+                                            <p className="text-xs truncate max-w-[200px] md:max-w-xs text-zinc-500">
+                                                {pixData.qr_code}
+                                            </p>
+                                            <button 
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(pixData.qr_code)
+                                                    alert("Código copiado!")
+                                                }}
+                                                className="text-xs text-[#d4af37] font-semibold hover:underline bg-[#d4af37]/10 px-3 py-1.5 rounded-md"
+                                            >
+                                                Copiar
+                                            </button>
+                                        </div>
 
-                                        // 🔥 1. cria pedido
-                                        const id = await createOrder("credit_card")
+                                        <button
+                                            onClick={() => router.push(`/success?order_id=${orderId}`)}
+                                            className="w-full mt-2 bg-[#d4af37] text-black py-3 rounded-lg font-semibold hover:bg-[#e0bd4f] shadow-lg shadow-[#d4af37]/20 transition-all font-semibold"
+                                        >
+                                            Já realizei o pagamento
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
-                                        const res = await fetch("/api/payment", {
-                                            method: "POST",
-                                            headers: {
-                                                "Content-Type": "application/json"
-                                            },
-                                            body: JSON.stringify({
-                                                order_id: id, // 🔥 ESSENCIAL
-                                                token: data.token,
-                                                payment_method_id: data.payment_method_id,
-                                                installments: data.installments,
-                                                issuer_id: data.issuer_id || undefined,
-                                                email: user.email,
-                                                cpf: user.cpf,
-                                                amount: safeTotal
-                                            })
-                                        })
-
-                                        const result = await res.json()
-
-                                        if (!res.ok) {
-                                            throw new Error(result.error || "Erro no pagamento")
-                                        }
-
-                                        if (result.status === "approved") {
-                                            router.push(`/success?order_id=${id}`)
-                                        } else if (result.status === "pending") {
-                                            alert("Pagamento pendente ⏳")
-                                        } else {
-                                            throw new Error("Pagamento recusado")
-                                        }
-
-                                    } catch (err: any) {
-                                        setError(err.message)
-                                    } finally {
-                                        setLoading(false)
-                                    }
-                                }}
-                            />
-                            {loading && (
-                                <p className="text-xs text-zinc-400">
-                                    Processando pagamento...
+                        {selectedPayment === "card" && (
+                            <div className="space-y-4 animate-fade-in">
+                                <p className="text-xs text-zinc-400 mb-2">
+                                    {getInstallmentLimit(items, safeTotal) > 1
+                                        ? `Parcele em até ${getInstallmentLimit(items, safeTotal)}x sem juros`
+                                        : "Pagamento à vista"}
                                 </p>
-                            )}
-                        </div>
+
+                                <div className="mt-2 bg-zinc-950/50 rounded-xl overflow-hidden p-2">
+                                    <div className="card-payment-wrapper">
+                                        <CardPayment
+                                            initialization={{
+                                                amount: safeTotal,
+                                                payer: {
+                                                    email: user.email,
+                                                    identification: {
+                                                        type: "CPF",
+                                                        number: user.cpf
+                                                    }
+                                                }
+                                            }}
+                                            customization={{
+                                                paymentMethods: {
+                                                    minInstallments: 1,
+                                                    maxInstallments: maxInstallments
+                                                }
+                                            }}
+                                            onSubmit={async (data) => {
+                                                try {
+                                                    if (!user.email || !user.cpf || !user.name) {
+                                                        setError("Preencha seus dados antes de pagar")
+                                                        return
+                                                    }
+
+                                                    setLoading(true)
+                                                    setError("")
+
+                                                    const id = await createOrder("credit_card")
+
+                                                    const res = await fetch("/api/payment", {
+                                                        method: "POST",
+                                                        headers: {
+                                                            "Content-Type": "application/json"
+                                                        },
+                                                        body: JSON.stringify({
+                                                            order_id: id,
+                                                            token: data.token,
+                                                            payment_method_id: data.payment_method_id,
+                                                            installments: data.installments,
+                                                            issuer_id: data.issuer_id || undefined,
+                                                            email: user.email,
+                                                            cpf: user.cpf,
+                                                            amount: safeTotal
+                                                        })
+                                                    })
+
+                                                    const result = await res.json()
+
+                                                    if (!res.ok) {
+                                                        throw new Error(result.error || "Erro no pagamento")
+                                                    }
+
+                                                    if (result.status === "approved") {
+                                                        router.push(`/success?order_id=${id}`)
+                                                    } else if (result.status === "pending") {
+                                                        alert("Pagamento pendente ⏳")
+                                                    } else {
+                                                        throw new Error("Pagamento recusado")
+                                                    }
+
+                                                } catch (err: any) {
+                                                    setError(err.message)
+                                                } finally {
+                                                    setLoading(false)
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                                
+                                {loading && (
+                                    <p className="text-xs text-zinc-400 flex items-center justify-center gap-2">
+                                        <span className="animate-spin w-4 h-4 border-2 border-[#d4af37] border-t-transparent rounded-full" />
+                                        Processando pagamento...
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </Card>
                 )}
 
