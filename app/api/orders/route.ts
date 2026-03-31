@@ -21,13 +21,14 @@ export async function POST(req: Request) {
             .from("orders")
             .insert([
                 {
-                    amount: Number(body.amount),
+                    total: Number(body.amount),
                     customer_name: body.user.name,
                     customer_email: body.user.email,
                     customer_cpf: cleanCpf,
                     shipping: body.shipping || {},
                     payment_method: body.payment_method || "unknown",
-                    status: "pending"
+                    status: "pending",
+                    items: body.items // Snapshot completo
                 }
             ])
             .select()
@@ -38,39 +39,6 @@ export async function POST(req: Request) {
             return NextResponse.json({ 
                 error: "Erro no banco ao criar pedido", 
                 details: orderError.message 
-            }, { status: 500 });
-        }
-
-        const itemsToInsert = body.items.map((item: any) => {
-            // O ID no frontend vem como "uuid-50" (ex: 123e4567-e89b-12d3-a456-426614174000-50)
-            let rawId = item.product_id || item.id;
-            
-            if (typeof rawId === "string" && rawId.length > 36) {
-                rawId = rawId.split('-').slice(0, 5).join('-'); 
-            }
-
-            return {
-                order_id: order.id,
-                product_id: rawId,
-                quantity: item.quantity,
-                price: item.price
-            };
-        });
-
-        const { error: itemsError } = await supabaseAdmin
-            .from("order_items")
-            .insert(itemsToInsert)
-
-        if (itemsError) {
-            console.error("Erro ao inserir itens (Supabase):", itemsError);
-            await supabaseAdmin
-                .from("orders")
-                .delete()
-                .eq("id", order.id)
-
-            return NextResponse.json({ 
-                error: "Erro no banco ao inserir itens", 
-                details: itemsError.message 
             }, { status: 500 });
         }
 

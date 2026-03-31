@@ -896,10 +896,10 @@ export default function CheckoutPage() {
                 </Card>
 
                 {/* BADGES (AGORA GIGANTE) */}
-                <div className="w-full pt-2">
+                <div className="w-full pt-4 overflow-hidden">
                     <img
                         src="/images/badges/badges.png"
-                        className="w-full scale-110 origin-top object-contain filter drop-shadow-2xl"
+                        className="w-full scale-[2.2] origin-top object-contain filter drop-shadow-2xl mb-8"
                         alt="Auditoria e Segurança"
                     />
                 </div>

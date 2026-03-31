@@ -1,4 +1,4 @@
-const BASE_URL = "https://linkancia-mvp.apeksdev.cloud/webhook/products";
+const BASE_URL = "/api/products";
 
 // 🔥 LISTAGEM GERAL
 export async function getPerfumes(

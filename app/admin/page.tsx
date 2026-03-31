@@ -24,7 +24,7 @@ export default function AdminPage() {
     }, [])
 
     // 💰 MÉTRICAS
-    const totalSales = orders.reduce((acc, o) => acc + (o.amount || 0), 0)
+    const totalSales = orders.reduce((acc, o) => acc + (o.total || o.amount || 0), 0)
 
     const statusCount = [
         { name: "Pagos", value: orders.filter(o => o.status === "paid").length },
