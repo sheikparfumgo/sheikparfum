@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 
 const fireConfetti = async () => {
@@ -17,7 +17,7 @@ const fireConfetti = async () => {
     }, 300)
 }
 
-export default function SuccessPage() {
+function SuccessContent() {
 
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -53,7 +53,7 @@ export default function SuccessPage() {
         loadOrder()
         fireConfetti()
 
-    }, [])
+    }, [searchParams])
 
     const totalItems =
         order?.items?.reduce((acc: number, i: any) => acc + i.quantity, 0) || 0
@@ -118,7 +118,7 @@ export default function SuccessPage() {
                     <div className="flex justify-between text-sm text-zinc-400">
                         <span>Itens ({totalItems})</span>
                         <span>
-                            R$ (order?.amount || 0).toFixed(2)
+                            R$ {(order?.amount || 0).toFixed(2)}
                         </span>
                     </div>
 
@@ -134,6 +134,7 @@ export default function SuccessPage() {
                                 <img
                                     src={item.image}
                                     className="w-12 h-12 rounded-lg bg-white"
+                                    alt={item.name}
                                 />
 
                                 <div className="flex-1">
@@ -213,5 +214,17 @@ export default function SuccessPage() {
             </div>
 
         </div>
+    )
+}
+
+export default function SuccessPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <p className="text-zinc-500 animate-pulse">Carregando...</p>
+            </div>
+        }>
+            <SuccessContent />
+        </Suspense>
     )
 }

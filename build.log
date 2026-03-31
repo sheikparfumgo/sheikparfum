@@ -1,0 +1,13 @@
+
+> sheik-parfum@0.1.0 build
+> next build
+
+
+> Build error occurred
+Error: EPERM: operation not permitted, unlink 'C:\Users\elain\OneDrive\Desktop\sheik-parfum\.next\static\dYqLMlIwsSwcMiKwqgaRe'
+    at ignore-listed frames {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'unlink',
+  path: 'C:\\Users\\elain\\OneDrive\\Desktop\\sheik-parfum\\.next\\static\\dYqLMlIwsSwcMiKwqgaRe'
+}
