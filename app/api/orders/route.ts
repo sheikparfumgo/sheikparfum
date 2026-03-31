@@ -31,12 +31,23 @@ export async function POST(req: Request) {
 
         if (orderError) throw orderError
 
-        const itemsToInsert = body.items.map((item: any) => ({
-            order_id: order.id,
-            product_id: item.product_id || item.id,
-            quantity: item.quantity,
-            price: item.price
-        }))
+        const itemsToInsert = body.items.map((item: any) => {
+            // O ID no frontend vem como "uuid-50" (ex: 123e4567-e89b-12d3-a456-426614174000-50)
+            // Se for string e tiver mais de 36 caracteres, pegamos os primeiros 36
+            let rawId = item.product_id || item.id;
+            
+            if (typeof rawId === "string" && rawId.length > 36) {
+                // Remove o sufixo "-[tamanho]" para extrair apenas o UUID correto
+                rawId = rawId.substring(0, 36); 
+            }
+
+            return {
+                order_id: order.id,
+                product_id: rawId,
+                quantity: item.quantity,
+                price: item.price
+            };
+        });
 
         const { error: itemsError } = await supabaseAdmin
             .from("order_items")

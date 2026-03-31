@@ -568,7 +568,7 @@ export default function CheckoutPage() {
                         }}
                     />
 
-                    <div className="min-h-[280px] transition-all duration-300">
+                    <div className="transition-all duration-300 overflow-hidden">
                         {shipping ? (
                             // ✅ FRETE SELECIONADO
                             <div className="p-3 md:p-4 rounded-lg border border-[#d4af37] flex justify-between items-center">
@@ -856,10 +856,11 @@ export default function CheckoutPage() {
                 </Card>
 
                 {/* BADGES (AGORA CERTO) */}
-                <div className="w-full">
+                <div className="glass rounded-xl p-5 border border-[#2a2a2a] flex items-center justify-center">
                     <img
                         src="/images/badges/badges.png"
-                        className="w-full max-w-[420px] mx-auto object-contain"
+                        className="w-full object-contain"
+                        alt="Auditoria e Segurança"
                     />
                 </div>
 
