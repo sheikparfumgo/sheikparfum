@@ -2,8 +2,10 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Compass, Radar, Bookmark, Store, Crown } from "lucide-react"
+import { Compass, Radar, Bookmark, Store, Crown, User } from "lucide-react"
 import Image from "next/image"
+import { supabase } from "@/lib/supabase/client"
+import { useEffect, useState } from "react"
 
 type SidebarProps = {
     mobile?: boolean
@@ -14,6 +16,21 @@ type SidebarProps = {
 export default function Sidebar({ mobile = false, open = false, onClose }: SidebarProps) {
 
     const pathname = usePathname()
+    const [user, setUser] = useState<any>(null)
+
+    useEffect(() => {
+        async function getUser() {
+            const { data } = await supabase.auth.getUser()
+            setUser(data.user)
+        }
+        getUser()
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null)
+        })
+
+        return () => subscription.unsubscribe()
+    }, [])
 
     return (
         <aside
@@ -56,23 +73,23 @@ export default function Sidebar({ mobile = false, open = false, onClose }: Sideb
                 <NavItem
                     href="/"
                     icon={<Compass size={20} />}
-                    label="Descobrir"
+                    label="Início"
                     active={pathname === "/"}
                     onClick={onClose}
                 />
 
                 <NavItem
-                    href="/radar"
+                    href="/novidades"
                     icon={<Radar size={20} />}
-                    label="Radar do Sheik"
-                    active={pathname === "/radar"}
+                    label="Novidades"
+                    active={pathname === "/novidades"}
                     onClick={onClose}
                 />
 
                 <NavItem
                     href="/lista"
                     icon={<Bookmark size={20} />}
-                    label="Lista do Sheik"
+                    label={user ? "Minha Coleção" : "Lista do Sheik"}
                     active={pathname === "/lista"}
                     onClick={onClose}
                 />
@@ -92,6 +109,16 @@ export default function Sidebar({ mobile = false, open = false, onClose }: Sideb
                     active={pathname === "/clube"}
                     onClick={onClose}
                 />
+
+                {user && (
+                    <NavItem
+                        href="/perfil"
+                        icon={<User size={20} />}
+                        label="Perfil"
+                        active={pathname === "/perfil"}
+                        onClick={onClose}
+                    />
+                )}
 
             </nav>
 

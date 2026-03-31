@@ -23,7 +23,7 @@ export default function LoginPage() {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
-                    redirectTo: `${window.location.origin}/admin`
+                    redirectTo: `${window.location.origin}/perfil`
                 }
             })
             if (error) throw error
@@ -45,13 +45,13 @@ export default function LoginPage() {
                     password
                 })
                 if (error) throw error
-                router.push("/admin")
+                router.push("/perfil")
             } else {
                 const { error } = await supabase.auth.signUp({
                     email,
                     password,
                     options: {
-                        emailRedirectTo: `${window.location.origin}/admin`
+                        emailRedirectTo: `${window.location.origin}/perfil`
                     }
                 })
                 if (error) throw error
