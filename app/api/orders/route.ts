@@ -21,7 +21,7 @@ export async function POST(req: Request) {
             .from("orders")
             .insert([
                 {
-                    total: Number(body.amount),
+                    amount: Number(body.amount),
                     customer_name: body.user.name,
                     customer_email: body.user.email,
                     customer_cpf: cleanCpf,
