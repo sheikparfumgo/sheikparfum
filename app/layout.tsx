@@ -4,6 +4,7 @@ import Header from "@/components/home/Header"
 import "@/app/globals.css"
 import AuthInitializer from "@/components/auth/AuthInitializer"
 import { Toaster } from "sonner"
+import Footer from "@/components/home/Footer"
 
 export default function RootLayout({
   children,
@@ -14,8 +15,8 @@ export default function RootLayout({
     <html lang="pt-br">
       <body className="bg-[#0F0F10] text-white">
         <AuthInitializer />
-        <Toaster 
-          theme="dark" 
+        <Toaster
+          theme="dark"
           position="top-right"
           toastOptions={{
             style: {
@@ -59,6 +60,7 @@ export default function RootLayout({
 
         </div>
 
+        <Footer />
       </body>
     </html>
   )

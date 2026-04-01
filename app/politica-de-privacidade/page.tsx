@@ -1,79 +1,63 @@
 export default function PoliticaPage() {
     return (
-        <div className="pt-24 pb-32 px-6 max-w-4xl mx-auto text-zinc-300">
+        <div className="pt-24 pb-32 px-6 max-w-4xl mx-auto text-zinc-300 space-y-6">
 
-            <header className="mb-10 text-center">
-                <h1 className="text-3xl font-bold text-yellow-500">
-                    Política de Privacidade
-                </h1>
-                <p className="text-sm text-zinc-500">
-                    Última atualização recente
-                </p>
-            </header>
+            <h1 className="text-3xl font-bold text-yellow-500">
+                Política de Privacidade
+            </h1>
 
-            <div className="space-y-6">
+            <p className="text-sm text-zinc-500">
+                Em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 - LGPD).
+            </p>
 
-                <Card
-                    title="Compromisso com sua privacidade"
-                    text="A Sheik Parfum protege seus dados conforme a LGPD, garantindo segurança e transparência."
-                />
+            <Section title="1. Controlador de Dados">
+                A Sheik Parfum é responsável pelo tratamento dos dados pessoais coletados na plataforma.
+            </Section>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                    <Card
-                        title="Dados coletados"
-                        text="Nome, e-mail, endereço, pedidos e preferências."
-                    />
-                    <Card
-                        title="Finalidade"
-                        text="Melhorar sua experiência, processar pedidos e personalizar recomendações."
-                    />
-                </div>
+            <Section title="2. Dados Coletados">
+                Coletamos dados como nome, e-mail, endereço, histórico de compras e dados de navegação.
+            </Section>
 
-                <Card
-                    title="Compartilhamento"
-                    text="Dados podem ser compartilhados com serviços como Google e plataformas de pagamento."
-                />
+            <Section title="3. Base Legal">
+                O tratamento é realizado com base em:
+                execução de contrato, consentimento e cumprimento de obrigação legal.
+            </Section>
 
-                <Card
-                    title="Segurança"
-                    text="Utilizamos criptografia e boas práticas para proteger suas informações."
-                />
+            <Section title="4. Finalidade">
+                Processar pedidos, autenticação, personalização da experiência e prevenção a fraudes.
+            </Section>
 
-                <Card
-                    title="Seus direitos"
-                    text="Você pode solicitar acesso, alteração ou exclusão dos seus dados."
-                />
+            <Section title="5. Compartilhamento">
+                Dados podem ser compartilhados com:
+                Google (login), gateways de pagamento e provedores de infraestrutura.
+            </Section>
 
-                {/* SUPORTE */}
-                <div className="mt-8 p-8 rounded-xl bg-zinc-900 text-center border border-yellow-500/20">
-                    <h3 className="text-xl font-bold text-yellow-500 mb-4">
-                        Dúvidas ou solicitações?
-                    </h3>
-                    <p className="text-sm text-zinc-400 mb-4">
-                        Entre em contato com nosso suporte
-                    </p>
-                    <a
-                        href="/suporte"
-                        className="px-6 py-3 bg-yellow-500 text-black rounded-lg font-bold"
-                    >
-                        Contatar Suporte
-                    </a>
-                </div>
+            <Section title="6. Direitos do Usuário">
+                Você pode solicitar:
+                acesso, correção, exclusão e portabilidade dos dados.
+            </Section>
 
-            </div>
+            <Section title="7. Segurança">
+                Utilizamos criptografia e boas práticas de segurança.
+            </Section>
+
+            <Section title="8. Retenção">
+                Dados são mantidos enquanto necessário para obrigações legais e operacionais.
+            </Section>
+
+            <Section title="9. Contato">
+                Email: sheikparfum.go@gmail.com
+            </Section>
+
         </div>
     )
 }
 
-function Card({ title, text }: { title: string; text: string }) {
+function Section({ title, children }: any) {
     return (
-        <section className="p-6 rounded-xl bg-zinc-900 border border-zinc-800">
-            <h3 className="text-yellow-500 font-bold mb-2">
-                {title}
-            </h3>
-            <p className="text-sm text-zinc-400">
-                {text}
-            </p>
-        </section>
+        <div className="p-5 bg-zinc-900 rounded-xl border border-zinc-800">
+            <h3 className="text-yellow-500 font-bold mb-2">{title}</h3>
+            <p className="text-sm text-zinc-400">{children}</p>
+        </div>
     )
 }
