@@ -7,18 +7,16 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-async function checkOrders() {
-    console.log("--- Verificando colunas da tabela orders ---")
-    const { data, error } = await supabase.from("orders").select("*").limit(1)
+async function checkView() {
+    console.log("--- Verificando view vw_perfumes_catalog ---")
+    const { data, error } = await supabase.from("vw_perfumes_catalog").select("*").limit(1)
     if (error) {
         console.log("❌ Erro:", error.message)
     } else if (data && data.length > 0) {
         console.log("✅ Colunas:", Object.keys(data[0]))
     } else {
-        const { data: cols, error: errCols } = await supabase.rpc('get_table_columns', { table_name: 'orders' })
-        if (errCols) console.log("❌ Erro RPC:", errCols.message)
-        else console.log("✅ Colunas (RPC):", cols)
+        console.log("⚠️ View vazia")
     }
 }
 
-checkOrders()
+checkView()

@@ -1,0 +1,12 @@
+﻿[dotenv@17.3.1] injecting env (6) from .env.local -- tip: ÔÜí´©Å secrets for agents: https://dotenvx.com/as2
+--- Verificando view vw_perfumes_catalog ---
+Ô£à Colunas: [
+  'perfume_id',  'perfume_name',
+  'slug',        'brand',
+  'image_main',  'images',
+  'description', 'olfactive_family',
+  'category',    'lowest_price',
+  'has_stock',   'products',
+  'top_notes',   'heart_notes',
+  'base_notes'
+]

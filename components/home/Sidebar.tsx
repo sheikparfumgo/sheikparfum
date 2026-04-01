@@ -4,8 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Compass, Radar, Bookmark, Store, Crown, User } from "lucide-react"
 import Image from "next/image"
-import { supabase } from "@/lib/supabase/client"
-import { useEffect, useState } from "react"
+import { useAuth } from "@/store/auth"
 
 type SidebarProps = {
     mobile?: boolean
@@ -16,21 +15,7 @@ type SidebarProps = {
 export default function Sidebar({ mobile = false, open = false, onClose }: SidebarProps) {
 
     const pathname = usePathname()
-    const [user, setUser] = useState<any>(null)
-
-    useEffect(() => {
-        async function getUser() {
-            const { data } = await supabase.auth.getUser()
-            setUser(data.user)
-        }
-        getUser()
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null)
-        })
-
-        return () => subscription.unsubscribe()
-    }, [])
+    const { user, profile } = useAuth()
 
     return (
         <aside

@@ -4,6 +4,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import NotifyModal from "@/components/ui/NotifyModal"
+import { Heart, PlayCircle, Loader2 } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
 
 type Product = {
     size_ml: number
@@ -12,6 +14,7 @@ type Product = {
 }
 
 type PerfumeCardProps = {
+    id: string
     name: string
     brand: string
     image: string
@@ -30,6 +33,7 @@ type PerfumeCardProps = {
 }
 
 export default function PerfumeCard({
+    id,
     name,
     brand,
     image,
@@ -45,6 +49,10 @@ export default function PerfumeCard({
     const [showNotify, setShowNotify] = useState(false)
     const [selectedSize, setSelectedSize] = useState<number | null>(null)
     const [added, setAdded] = useState(false)
+    const [favLoading, setFavLoading] = useState(false)
+
+    const { user, favorites, toggleFavorite } = useAuth()
+    const isFavorite = favorites.includes(id)
 
     const sizes = [5, 10, 100]
 
@@ -119,6 +127,32 @@ export default function PerfumeCard({
                     fill
                     className="object-cover transition duration-500 group-hover:scale-110"
                 />
+
+                {/* BOTÃO DE FAVORITO */}
+                <button
+                    onClick={async (e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        if (!user) return window.location.href = "/login"
+                        setFavLoading(true)
+                        await toggleFavorite(id)
+                        setFavLoading(false)
+                    }}
+                    className={`
+                        absolute top-3 right-3 z-50
+                        p-2 rounded-full backdrop-blur-md shadow-lg
+                        transition-all duration-300
+                        ${isFavorite 
+                            ? "bg-[#d4af37] text-black" 
+                            : "bg-black/50 text-[#d4af37] hover:bg-[#d4af37]/20"}
+                    `}
+                >
+                    {favLoading ? (
+                        <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                        <Heart size={18} fill={isFavorite ? "currentColor" : "none"} />
+                    )}
+                </button>
 
                 {!hasStock && (
                     <div className="absolute inset-0 z-30 bg-black/60 flex items-center justify-center text-xs text-white">

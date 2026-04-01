@@ -895,11 +895,11 @@ export default function CheckoutPage() {
                     </div>
                 </Card>
 
-                {/* BADGES (AGORA GIGANTE) */}
-                <div className="w-full pt-16 pb-8">
+                {/* BADGES (CORRIGIDO: SEM CORTE) */}
+                <div className="w-full pt-16 pb-8 px-4 flex justify-center overflow-hidden">
                     <img
                         src="/images/badges/badges.png"
-                        className="w-full h-auto scale-[1.7] object-contain filter drop-shadow-2xl"
+                        className="max-w-md w-full h-auto object-contain filter drop-shadow-2xl opacity-80"
                         alt="Auditoria e Segurança"
                     />
                 </div>

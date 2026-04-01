@@ -2,6 +2,7 @@ import Sidebar from "@/components/home/Sidebar"
 
 import Header from "@/components/home/Header"
 import "@/app/globals.css"
+import AuthInitializer from "@/components/auth/AuthInitializer"
 
 export default function RootLayout({
   children,
@@ -11,6 +12,7 @@ export default function RootLayout({
   return (
     <html lang="pt-br">
       <body className="bg-[#0F0F10] text-white">
+        <AuthInitializer />
 
         <div className="flex min-h-screen w-full overflow-x-hidden">
 

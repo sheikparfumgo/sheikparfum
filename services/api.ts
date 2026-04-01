@@ -26,6 +26,21 @@ export async function getPerfumes(
     return res.json();
 }
 
+// 🔥 BUSCAR POR IDs (FAVORITOS)
+export async function getPerfumesByIds(ids: string[]) {
+    if (ids.length === 0) return [];
+    
+    const res = await fetch(`${BASE_URL}?ids=${ids.join(",")}`, {
+        cache: "no-store",
+    });
+
+    if (!res.ok) {
+        throw new Error("Erro ao buscar favoritos");
+    }
+
+    return res.json();
+}
+
 // 🔥 PERFUME POR SLUG
 export async function getPerfumeBySlug(slug: string) {
     const params = new URLSearchParams();

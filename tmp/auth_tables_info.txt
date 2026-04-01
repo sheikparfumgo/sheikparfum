@@ -1,0 +1,4 @@
+--- Verificando Estrutura das Tabelas ---
+✅ Tabela profiles encontrada. Colunas: ["id","email","full_name","avatar_url","role","is_active","is_club_member","created_at","updated_at"]
+✅ Tabela addresses encontrada. Colunas: "Tabela vazia"
+✅ Tabela favorites encontrada. Colunas: "Tabela vazia"

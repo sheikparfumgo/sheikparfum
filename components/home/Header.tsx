@@ -4,76 +4,45 @@ import { Search, ShoppingCart, User, Menu, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import Sidebar from "@/components/home/Sidebar"
 import { useCart } from "@/store/cart"
-import { supabase } from "@/lib/supabase/client"
+import { useAuth } from "@/store/auth"
 
 export default function Header() {
-
+    const { user, profile } = useAuth()
     const [scrolled, setScrolled] = useState(false)
     const [menuOpen, setMenuOpen] = useState(false)
     const [searchOpen, setSearchOpen] = useState(false)
     const [cartOpen, setCartOpen] = useState(false)
 
-
     const searchRef = useRef<HTMLDivElement>(null)
     const cartRef = useRef<HTMLDivElement>(null)
-
-    const [user, setUser] = useState<any>(null)
 
     const updateQuantity = useCart((state) => state.updateQuantity)
     const removeItem = useCart((state) => state.removeItem)
     const items = useCart((state) => state.items)
 
     useEffect(() => {
-        async function getUser() {
-            const { data } = await supabase.auth.getUser()
-            setUser(data.user)
-        }
-
-        getUser()
-
-        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null)
-        })
-
-        return () => {
-            listener.subscription.unsubscribe()
-        }
-    }, [])
-
-    useEffect(() => {
-
         const handleScroll = () => {
             setScrolled(window.scrollY > 10)
         }
-
         window.addEventListener("scroll", handleScroll)
-
         return () => {
             window.removeEventListener("scroll", handleScroll)
         }
-
     }, [])
 
     useEffect(() => {
-
         function handleClickOutside(e: any) {
-
             if (searchRef.current && !searchRef.current.contains(e.target)) {
                 setSearchOpen(false)
             }
-
             if (cartRef.current && !cartRef.current.contains(e.target)) {
                 setCartOpen(false)
             }
-
         }
-
         document.addEventListener("mousedown", handleClickOutside)
-
         return () => {
             document.removeEventListener("mousedown", handleClickOutside)
         }
-
     }, [])
 
     return (
@@ -159,12 +128,12 @@ export default function Header() {
                                     autoFocus
                                     placeholder="Buscar perfumes..."
                                     className="
-                  bg-transparent
-                  outline-none
-                  text-sm
-                  flex-1
-                  placeholder:text-gray-500
-                "
+                   bg-transparent
+                   outline-none
+                   text-sm
+                   flex-1
+                   placeholder:text-gray-500
+                 "
                                 />
 
                                 <button onClick={() => setSearchOpen(false)}>
@@ -184,16 +153,16 @@ export default function Header() {
                         <button
                             onClick={() => setCartOpen(!cartOpen)}
                             className="
-              w-10 h-10
-              flex items-center justify-center
-              rounded-xl
-              bg-[#1c1c1e]
-              border border-[#2a2a2a]
-              hover:border-[#c9a34a]/40
-              hover:bg-[#202022]
-              hover:scale-105
-              transition
-            "
+               w-10 h-10
+               flex items-center justify-center
+               rounded-xl
+               bg-[#1c1c1e]
+               border border-[#2a2a2a]
+               hover:border-[#c9a34a]/40
+               hover:bg-[#202022]
+               hover:scale-105
+               transition
+             "
                         >
                             <ShoppingCart size={18} className="text-[#c9a34a]" />
                         </button>
@@ -203,15 +172,15 @@ export default function Header() {
                         {items.length > 0 && (
                             <span
                                 className="
-            absolute -top-1 -right-1
-            text-[10px]
-            bg-[#c9a34a]
-            text-black
-            px-1.5
-            py-[2px]
-            rounded-full
-            font-bold
-        "
+             absolute -top-1 -right-1
+             text-[10px]
+             bg-[#c9a34a]
+             text-black
+             px-1.5
+             py-[2px]
+             rounded-full
+             font-bold
+         "
                             >
                                 {items.length}
                             </span>
@@ -223,15 +192,15 @@ export default function Header() {
 
                             <div
                                 className="
-                absolute right-0 mt-3
-                w-72
-                bg-[#1a1a1c]
-                border border-[#2a2a2a]
-                rounded-xl
-                shadow-xl
-                p-4
-                space-y-3
-              "
+                 absolute right-0 mt-3
+                 w-72
+                 bg-[#1a1a1c]
+                 border border-[#2a2a2a]
+                 rounded-xl
+                 shadow-xl
+                 p-4
+                 space-y-3
+               "
                             >
 
                                 <h4 className="text-sm font-semibold text-white">
@@ -336,26 +305,27 @@ export default function Header() {
                     {user ? (
 
                         <div
+                            onClick={() => window.location.href = "/perfil"}
                             className="
-              hidden md:flex
-              items-center gap-2
-              px-2 py-1
-              rounded-full
-              bg-[#1c1c1e]
-              border border-[#2a2a2a]
-              hover:border-[#c9a34a]/40
-              cursor-pointer
-              transition
-            "
+               hidden md:flex
+               items-center gap-2
+               px-2 py-1
+               rounded-full
+               bg-[#1c1c1e]
+               border border-[#2a2a2a]
+               hover:border-[#c9a34a]/40
+               cursor-pointer
+               transition
+             "
                         >
 
                             <img
-                                src={user.user_metadata?.avatar_url}
+                                src={profile?.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + user?.email}
                                 className="w-7 h-7 rounded-full"
                             />
 
                             <span className="text-sm text-gray-300 pr-2">
-                                {user.user_metadata?.full_name || user.email}
+                                {profile?.full_name || user?.email}
                             </span>
 
                         </div>
@@ -388,6 +358,7 @@ export default function Header() {
                     {user ? (
 
                         <button
+                            onClick={() => window.location.href = "/perfil"}
                             className="
     md:hidden
     w-10 h-10
@@ -399,7 +370,7 @@ export default function Header() {
   "
                         >
                             <img
-                                src={user.user_metadata?.avatar_url || "/default-avatar.png"}
+                                src={profile?.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + user?.email}
                                 alt="avatar"
                                 className="w-8 h-8 rounded-full"
                             />

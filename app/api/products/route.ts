@@ -7,6 +7,7 @@ export async function GET(req: Request) {
         const brand = searchParams.get("brand")
         const family = searchParams.get("family")
         const exclude = searchParams.get("exclude")
+        const ids = searchParams.get("ids")
         const limitParam = searchParams.get("limit")
         const offset = searchParams.get("offset") || "0"
         const order = searchParams.get("order") || "perfume_name.asc"
@@ -24,6 +25,8 @@ export async function GET(req: Request) {
         // 🔍 Filtros
         if (slug) {
             apiUrl += `&slug=eq.${slug}`
+        } else if (ids) {
+            apiUrl += `&perfume_id=in.(${ids})`
         } else {
             if (brand) apiUrl += `&brand=eq.${brand}`
             if (family) apiUrl += `&olfactive_family=eq.${family}`
@@ -73,12 +76,17 @@ export async function GET(req: Request) {
             }
         }
 
-        // 💎 3. NORMALIZAÇÃO
-        const normalized = data.map((items: any) => ({
-            ...items,
-            products: Array.isArray(items.products) ? items.products : [],
-            has_stock: items.has_stock ?? (items.in_stock === true || items.in_stock === "true" || (items.stock > 0))
-        }))
+        // 💎 3. NORMALIZAÇÃO (CORRIGIDO: has_stock mais robusto)
+        const normalized = data.map((items: any) => {
+            const productsList = Array.isArray(items.products) ? items.products : []
+            const someInStock = productsList.some((p: any) => p.in_stock === true || p.in_stock === "true")
+            
+            return {
+                ...items,
+                products: productsList,
+                has_stock: items.has_stock || someInStock || (items.stock > 0)
+            }
+        })
 
         return NextResponse.json(normalized)
 
