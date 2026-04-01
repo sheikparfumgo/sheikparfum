@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import NotifyModal from "@/components/ui/NotifyModal"
 import { Heart, PlayCircle, Loader2 } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
+import { useRouter } from "next/navigation"
 
 type Product = {
     size_ml: number
@@ -14,7 +15,8 @@ type Product = {
 }
 
 type PerfumeCardProps = {
-    id: string
+    id?: string
+    showFavorite?: boolean
     name: string
     brand: string
     image: string
@@ -34,6 +36,7 @@ type PerfumeCardProps = {
 
 export default function PerfumeCard({
     id,
+    showFavorite = false,
     name,
     brand,
     image,
@@ -44,6 +47,7 @@ export default function PerfumeCard({
     hasStock = true,
 }: PerfumeCardProps) {
 
+    const router = useRouter()
     const [currentIndex, setCurrentIndex] = useState(0)
     const [isHovered, setIsHovered] = useState(false)
     const [showNotify, setShowNotify] = useState(false)
@@ -51,8 +55,9 @@ export default function PerfumeCard({
     const [added, setAdded] = useState(false)
     const [favLoading, setFavLoading] = useState(false)
 
-    const { user, favorites, toggleFavorite } = useAuth()
-    const isFavorite = favorites.includes(id)
+    const { user, favorites = [], toggleFavorite } = useAuth()
+
+    const isFavorite = id ? favorites.includes(id) : false
 
     const sizes = [5, 10, 100]
 
@@ -91,18 +96,39 @@ export default function PerfumeCard({
         e.preventDefault()
         e.stopPropagation()
 
-        if (!selectedProduct) return
+        if (!selectedProduct || !id) return
 
+        const cart = JSON.parse(localStorage.getItem("cart") || "[]")
+
+        const newItem = {
+            perfume_id: id,
+            name,
+            image,
+            size: selectedProduct.size_ml,
+            price: Number(selectedProduct.price),
+            quantity: 1
+        }
+
+        const existingIndex = cart.findIndex(
+            (item: any) =>
+                item.perfume_id === id &&
+                item.size === selectedProduct.size_ml
+        )
+
+        if (existingIndex >= 0) {
+            cart[existingIndex].quantity += 1
+        } else {
+            cart.push(newItem)
+        }
+
+        localStorage.setItem("cart", JSON.stringify(cart))
+
+        // feedback visual
         setAdded(true)
+        setTimeout(() => setAdded(false), 1500)
 
-        console.log("comprar", {
-            perfume: name,
-            size: selectedProduct.size_ml
-        })
-
-        setTimeout(() => {
-            setAdded(false)
-        }, 1500)
+        // 🔥 atualiza header (se tiver contador)
+        window.dispatchEvent(new Event("cartUpdated"))
     }
 
     const card = (
@@ -129,30 +155,36 @@ export default function PerfumeCard({
                 />
 
                 {/* BOTÃO DE FAVORITO */}
-                <button
-                    onClick={async (e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        if (!user) return window.location.href = "/login"
-                        setFavLoading(true)
-                        await toggleFavorite(id)
-                        setFavLoading(false)
-                    }}
-                    className={`
+                {showFavorite && id && (
+                    <button
+                        onClick={async (e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            if (!user) {
+                                localStorage.setItem("pending_favorite", id!)
+                                router.push("/login?redirect=/loja")
+                                return
+                            }
+                            setFavLoading(true)
+                            await toggleFavorite(id)
+                            setFavLoading(false)
+                        }}
+                        className={`
                         absolute top-3 right-3 z-50
                         p-2 rounded-full backdrop-blur-md shadow-lg
                         transition-all duration-300
-                        ${isFavorite 
-                            ? "bg-[#d4af37] text-black" 
-                            : "bg-black/50 text-[#d4af37] hover:bg-[#d4af37]/20"}
+                        ${isFavorite
+                                ? "bg-[#d4af37] text-black"
+                                : "bg-black/50 text-[#d4af37] hover:bg-[#d4af37]/20"}
                     `}
-                >
-                    {favLoading ? (
-                        <Loader2 size={18} className="animate-spin" />
-                    ) : (
-                        <Heart size={18} fill={isFavorite ? "currentColor" : "none"} />
-                    )}
-                </button>
+                    >
+                        {favLoading ? (
+                            <Loader2 size={18} className="animate-spin" />
+                        ) : (
+                            <Heart size={18} fill={isFavorite ? "currentColor" : "none"} />
+                        )}
+                    </button>
+                )}
 
                 {!hasStock && (
                     <div className="absolute inset-0 z-30 bg-black/60 flex items-center justify-center text-xs text-white">

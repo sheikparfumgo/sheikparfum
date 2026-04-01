@@ -150,5 +150,6 @@ export const useAuth = create<AuthStore>((set, get) => ({
     signOut: async () => {
         await supabase.auth.signOut()
         set({ user: null, profile: null, favorites: [] })
+        window.location.href = "/"
     }
 }))

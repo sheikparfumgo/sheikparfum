@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Compass, Radar, Bookmark, Store, Crown, User } from "lucide-react"
 import Image from "next/image"
-import { useAuth } from "@/store/auth"
+import { useAuth } from "@/hooks/useAuth"
 
 type SidebarProps = {
     mobile?: boolean

@@ -117,6 +117,7 @@ export default function StoreGrid({ brand, order, hideOutOfStock, profile }: Pro
                         <PerfumeCard
                             key={perfume.perfume_id}
                             id={perfume.id || perfume.perfume_id}
+                            showFavorite
                             name={perfume.perfume_name}
                             brand={perfume.brand}
                             image={

@@ -4,7 +4,7 @@ import { Search, ShoppingCart, User, Menu, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import Sidebar from "@/components/home/Sidebar"
 import { useCart } from "@/store/cart"
-import { useAuth } from "@/store/auth"
+import { useAuth } from "@/hooks/useAuth"
 
 export default function Header() {
     const { user, profile } = useAuth()

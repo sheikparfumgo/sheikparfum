@@ -5,10 +5,24 @@ import { useAuth } from "@/hooks/useAuth"
 import { getPerfumesByIds } from "@/services/api"
 import PerfumeCard from "@/components/perfume/PerfumeCard"
 import { 
-    Bookmark, Heart, Wine, Search, 
-    Lock, ArrowRight, Loader2, Info, ShoppingBag
+    Bookmark, Heart, Wine, ArrowRight, Loader2, ShoppingBag
 } from "lucide-react"
 import { useRouter } from "next/navigation"
+
+// ─── SKELETON CARD ───────────────────────────────────────────
+function SkeletonCard() {
+    return (
+        <div className="rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 animate-pulse">
+            <div className="aspect-square bg-zinc-800" />
+            <div className="p-3 space-y-2">
+                <div className="h-2 bg-zinc-800 rounded w-1/3" />
+                <div className="h-3 bg-zinc-800 rounded w-3/4" />
+                <div className="h-3 bg-zinc-800 rounded w-1/2" />
+                <div className="h-8 bg-zinc-800 rounded mt-4" />
+            </div>
+        </div>
+    )
+}
 
 export default function ListaPage() {
     const router = useRouter()
@@ -40,22 +54,27 @@ export default function ListaPage() {
         }
     }, [favorites, authLoading])
 
-    if (authLoading || (loading && favorites.length > 0)) {
+    // ─── LOADING STATE ────────────────────────────────────────
+    if (authLoading) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <Loader2 className="animate-spin text-[#c9a34a]" size={32} />
+            <div className="max-w-[1400px] mx-auto py-8 px-4 sm:px-6 space-y-10">
+                <div className="border-b border-zinc-800 pb-8 space-y-2">
+                    <div className="h-3 bg-zinc-800 rounded w-24 animate-pulse" />
+                    <div className="h-8 bg-zinc-800 rounded w-48 animate-pulse" />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {[1,2,3,4,5,6,7,8].map(i => <SkeletonCard key={i} />)}
+                </div>
             </div>
         )
     }
 
-    // ---------------------------------------------------------
-    // ❌ VISÃO DESLOGADA
-    // ---------------------------------------------------------
+    // ─── VISÃO DESLOGADA ──────────────────────────────────────
     if (!user) {
         return (
             <div className="max-w-2xl mx-auto py-16 px-4 text-center space-y-8 animate-fade-in">
-                <div className="inline-flex p-4 rounded-3xl bg-[#c9a34a]/10 mb-4">
-                    <Bookmark size={40} className="text-[#c9a34a]" />
+                <div className="inline-flex p-5 rounded-3xl bg-[#c9a34a]/10 mb-4 border border-[#c9a34a]/20">
+                    <Bookmark size={44} className="text-[#c9a34a]" />
                 </div>
                 <div className="space-y-4">
                     <h1 className="text-4xl font-bold bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">
@@ -80,7 +99,7 @@ export default function ListaPage() {
                 <div className="pt-8 space-y-4">
                     <button 
                         onClick={() => router.push("/login")}
-                        className="w-full h-14 bg-gradient-to-r from-[#d4af37] to-[#c9a34a] text-black font-bold rounded-xl flex items-center justify-center gap-2 group hover:scale-[1.02] transition-all"
+                        className="w-full h-14 bg-gradient-to-r from-[#d4af37] to-[#c9a34a] text-black font-bold rounded-xl flex items-center justify-center gap-2 group hover:scale-[1.02] transition-all shadow-lg shadow-[#c9a34a]/20"
                     >
                         Entrar ou Criar Conta
                         <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -91,17 +110,21 @@ export default function ListaPage() {
         )
     }
 
-    // ---------------------------------------------------------
-    // ✅ VISÃO LOGADA
-    // ---------------------------------------------------------
+    // ─── VISÃO LOGADA ─────────────────────────────────────────
     return (
         <div className="max-w-[1400px] mx-auto py-8 px-4 sm:px-6 space-y-10 animate-fade-in">
             
+            {/* HEADER */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-800 pb-8">
                 <div>
                     <h2 className="text-[#c9a34a] text-sm font-bold uppercase tracking-widest mb-1">Área do Usuário</h2>
                     <h1 className="text-4xl font-bold text-white tracking-tight">Minha Coleção</h1>
-                    <p className="text-zinc-500 text-sm mt-1">Seu arsenal particular de fragrâncias exclusivas.</p>
+                    <p className="text-zinc-500 text-sm mt-1">
+                        {favorites.length === 0 
+                            ? "Seu arsenal particular de fragrâncias exclusivas."
+                            : `${favorites.length} perfume${favorites.length !== 1 ? "s" : ""} salvo${favorites.length !== 1 ? "s" : ""} na sua coleção.`
+                        }
+                    </p>
                 </div>
 
                 <div className="flex gap-2 bg-zinc-900/50 p-1 rounded-xl border border-zinc-800">
@@ -110,14 +133,20 @@ export default function ListaPage() {
                 </div>
             </div>
 
-            {perfumes.length === 0 ? (
+            {/* LOADING SKELETON (após auth resolver) */}
+            {loading && favorites.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {favorites.map((_, i) => <SkeletonCard key={i} />)}
+                </div>
+            ) : perfumes.length === 0 ? (
+                /* ESTADO VAZIO */
                 <div className="py-24 text-center glass border-dashed bg-transparent">
                     <div className="w-20 h-20 bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-zinc-800">
                         <ShoppingBag className="text-zinc-600" size={32} />
                     </div>
-                    <h3 className="text-white font-bold text-xl">Sua estante está vazia</h3>
+                    <h3 className="text-white font-bold text-xl">Você ainda não adicionou perfumes à sua coleção</h3>
                     <p className="text-zinc-500 text-sm max-w-xs mx-auto mt-2 font-light">
-                        Você ainda não adicionou perfumes à sua coleção. Explore nossa loja e descubra sua próxima assinatura.
+                        Explore nossa loja, clique no ❤️ e salve suas fragrâncias favoritas aqui.
                     </p>
                     <button 
                         onClick={() => router.push("/loja")}
@@ -127,17 +156,23 @@ export default function ListaPage() {
                     </button>
                 </div>
             ) : (
+                /* GRID DE FAVORITOS */
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {perfumes.map((perfume) => (
-                        <PerfumeCard
+                        <div 
                             key={perfume.perfume_id}
-                            id={perfume.perfume_id}
-                            name={perfume.perfume_name}
-                            brand={perfume.brand}
-                            image={perfume.image_main || (Array.isArray(perfume.images) ? perfume.images[0] : null) || "/placeholder.png"}
-                            href={`/perfume/${perfume.slug}`}
-                            hasStock={perfume.has_stock}
-                        />
+                            className="animate-fade-in"
+                            style={{ animationDelay: `${perfumes.indexOf(perfume) * 50}ms` }}
+                        >
+                            <PerfumeCard
+                                id={perfume.perfume_id}
+                                name={perfume.perfume_name}
+                                brand={perfume.brand}
+                                image={perfume.image_main || (Array.isArray(perfume.images) ? perfume.images[0] : null) || "/placeholder.png"}
+                                href={`/perfume/${perfume.slug}`}
+                                hasStock={perfume.has_stock}
+                            />
+                        </div>
                     ))}
                 </div>
             )}

@@ -141,6 +141,7 @@ export default function ClubeDashboard() {
 
                             <PerfumeCard
                                 key={perfume.id}
+                                id={String(perfume.id)}
                                 name={perfume.name}
                                 brand={perfume.brand}
                                 image={perfume.image}

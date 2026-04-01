@@ -3,6 +3,7 @@ import Sidebar from "@/components/home/Sidebar"
 import Header from "@/components/home/Header"
 import "@/app/globals.css"
 import AuthInitializer from "@/components/auth/AuthInitializer"
+import { Toaster } from "sonner"
 
 export default function RootLayout({
   children,
@@ -13,6 +14,17 @@ export default function RootLayout({
     <html lang="pt-br">
       <body className="bg-[#0F0F10] text-white">
         <AuthInitializer />
+        <Toaster 
+          theme="dark" 
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: '#1a1a1c',
+              border: '1px solid #2a2a2a',
+              color: '#f5f5f5',
+            }
+          }}
+        />
 
         <div className="flex min-h-screen w-full overflow-x-hidden">
 
