@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useCart } from "@/store/cart"
+import { useRef } from "react"
 import { useRouter } from "next/navigation"
 import { initMercadoPago } from "@mercadopago/sdk-react"
 import { CardPayment } from "@mercadopago/sdk-react"
@@ -15,7 +16,7 @@ export default function CheckoutPage() {
     }, [])
 
     const router = useRouter()
-
+    const saveTimeout = useRef<NodeJS.Timeout | null>(null)
     const [timeLeft, setTimeLeft] = useState(0)
     const items = useCart((s) => s.items)
     const total = useCart((s) => s.getTotalWithShipping())
@@ -39,7 +40,7 @@ export default function CheckoutPage() {
     const [discountValue, setDiscountValue] = useState(0)
 
     const totalWithCoupon = Math.max(0, safeTotal - discountValue)
-
+    const [addresses, setAddresses] = useState<any[]>([])
     const [address, setAddress] = useState({
         cep: savedAddress?.cep || "",
         street: savedAddress?.street || "",
@@ -51,6 +52,9 @@ export default function CheckoutPage() {
 
     const [loadingCep, setLoadingCep] = useState(false)
     const shipping = useCart((s) => s.shipping)
+
+    const [session, setSession] = useState<any>(null)
+    const [loadingSession, setLoadingSession] = useState(true)
 
     const [user, setUser] = useState({
         name: "",
@@ -80,6 +84,40 @@ export default function CheckoutPage() {
     }), [maxInstallments])
 
     useEffect(() => {
+        async function getSession() {
+            const {
+                data: { session }
+            } = await supabase.auth.getSession()
+
+            setSession(session)
+            setLoadingSession(false)
+        }
+
+        getSession()
+    }, [])
+
+    useEffect(() => {
+        async function loadAddresses() {
+            const {
+                data: { session }
+            } = await supabase.auth.getSession()
+
+            if (!session?.access_token) return
+
+            const res = await fetch("/api/address/list", {
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`
+                }
+            })
+
+            const data = await res.json()
+            setAddresses(data.addresses || [])
+        }
+
+        loadAddresses()
+    }, [])
+
+    useEffect(() => {
         async function loadAddress() {
             const {
                 data: { session }
@@ -100,7 +138,7 @@ export default function CheckoutPage() {
             const addr = data.address
 
             const formatted = {
-                cep: addr.cep || "",
+                cep: addr.zip_code || "", // 🔥 ajuste correto
                 street: addr.street || "",
                 city: addr.city || "",
                 state: addr.state || "",
@@ -108,8 +146,16 @@ export default function CheckoutPage() {
                 complement: addr.complement || ""
             }
 
+            // endereço
             setAddress(formatted)
-            setAddressGlobal(formatted) // mantém no carrinho também
+            setAddressGlobal(formatted)
+
+            // 🔥 DADOS DO USUÁRIO
+            setUser((prev) => ({
+                ...prev,
+                name: prev.name || addr.recipient_name,
+                phone: addr.phone || prev.phone
+            }))
         }
 
         loadAddress()
@@ -131,6 +177,30 @@ export default function CheckoutPage() {
 
         loadUser()
     }, [])
+
+    useEffect(() => {
+        if (saveTimeout.current) {
+            clearTimeout(saveTimeout.current)
+        }
+
+        saveTimeout.current = setTimeout(() => {
+            autoSaveAddress()
+        }, 1000) // espera 1s após parar de digitar
+
+        return () => {
+            if (saveTimeout.current) {
+                clearTimeout(saveTimeout.current)
+            }
+        }
+    }, [
+        address.street,
+        address.number,
+        address.cep,
+        address.city,
+        address.state,
+        user.name,
+        user.phone
+    ])
 
     useEffect(() => {
         const STORAGE_KEY = "checkout_timer_session"
@@ -256,10 +326,66 @@ export default function CheckoutPage() {
             throw new Error(data.details || data.error || "Erro ao criar pedido")
         }
 
+        // 🔥 SALVAR ENDEREÇO AUTOMATICAMENTE
+        try {
+            await fetch("/api/address/save", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({
+                    street: address.street,
+                    number: address.number,
+                    complement: address.complement,
+                    neighborhood: "",
+                    city: address.city,
+                    state: address.state,
+                    zip_code: address.cep,
+                    recipient_name: user.name,
+                    phone: user.phone
+                })
+            })
+        } catch (err) {
+            console.warn("Erro ao salvar endereço (ignorado)")
+        }
+
         setOrderId(data.id)
 
         return data.id
     }
+
+    async function autoSaveAddress() {
+        try {
+            if (!session?.access_token) return
+
+            // 🔒 validação mínima
+            if (!address.street || !address.number || !address.cep) return
+
+            await fetch("/api/address/save", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                    street: address.street,
+                    number: address.number,
+                    complement: address.complement,
+                    neighborhood: "",
+                    city: address.city,
+                    state: address.state,
+                    zip_code: address.cep,
+                    recipient_name: user.name,
+                    phone: user.phone
+                })
+            })
+
+        } catch (err) {
+            console.warn("Auto-save falhou (ignorado)")
+        }
+    }
+
     async function handlePix() {
         if (!user.email || !user.cpf || !user.name) {
             setError("Preencha seus dados antes de pagar")
@@ -485,7 +611,30 @@ export default function CheckoutPage() {
         )
     }
 
+    if (loadingSession) {
+        return (
+            <div className="h-[60vh] flex items-center justify-center">
+                <div className="animate-spin w-6 h-6 border-2 border-[#d4af37] border-t-transparent rounded-full" />
+            </div>
+        )
+    }
 
+    if (!session) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+                <p className="text-zinc-400">
+                    Você precisa estar logado para finalizar a compra
+                </p>
+
+                <button
+                    onClick={() => router.push(`/login?redirect=/checkout`)}
+                    className="btn-primary"
+                >
+                    Fazer login
+                </button>
+            </div>
+        )
+    }
     return (
         <div className="max-w-6xl mx-auto px-4 py-6 lg:py-8 grid lg:grid-cols-[1.2fr_0.8fr] gap-6 lg:gap-8">
 
@@ -634,6 +783,49 @@ export default function CheckoutPage() {
                         </div>
                     )}
                 </Card>
+
+                {addresses.length > 0 && (
+                    <div className="space-y-2">
+                        <p className="text-xs text-zinc-400">Endereços salvos</p>
+
+                        {addresses.map((addr) => (
+                            <div
+                                key={addr.id}
+                                onClick={() => {
+                                    const formatted = {
+                                        cep: addr.zip_code,
+                                        street: addr.street,
+                                        city: addr.city,
+                                        state: addr.state,
+                                        number: addr.number,
+                                        complement: addr.complement
+                                    }
+
+                                    setAddress(formatted)
+                                    setAddressGlobal(formatted)
+
+                                    setUser((prev) => ({
+                                        ...prev,
+                                        name: addr.recipient_name || prev.name,
+                                        phone: addr.phone || prev.phone
+                                    }))
+                                }}
+                                className="p-3 border border-zinc-800 rounded-lg cursor-pointer hover:border-[#d4af37]"
+                            >
+                                <p className="text-sm">{addr.street}, {addr.number}</p>
+                                <p className="text-xs text-zinc-400">
+                                    {addr.city} - {addr.state}
+                                </p>
+
+                                {addr.is_default && (
+                                    <span className="text-[10px] text-[#d4af37]">
+                                        Padrão
+                                    </span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 <Card>
                     <SectionTitle title="Endereço de entrega" />

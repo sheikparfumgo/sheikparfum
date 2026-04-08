@@ -13,12 +13,17 @@ import {
 } from "lucide-react"
 import AddressModal from "@/components/profile/AddressModal"
 
+type OrderItem = {
+    name?: string
+    quantity?: number
+}
+
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
     paid: { label: "Pago", color: "bg-green-500/10 text-green-400" },
     shipped: { label: "Enviado", color: "bg-blue-500/10 text-blue-400" },
     delivered: { label: "Entregue", color: "bg-emerald-500/10 text-emerald-400" },
     pending: { label: "Pendente", color: "bg-orange-500/10 text-orange-400" },
-    cancelled: { label: "Cancelado", color: "bg-red-500/10 text-red-400" },
+    canceled: { label: "Cancelado", color: "bg-red-500/10 text-red-400" },
 }
 
 export default function ProfilePage() {
@@ -36,6 +41,7 @@ export default function ProfilePage() {
     const [isEditingName, setIsEditingName] = useState(false)
     const [newName, setNewName] = useState("")
 
+
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     async function loadData() {
@@ -44,7 +50,7 @@ export default function ProfilePage() {
         // 📦 Buscar Pedidos por user_id (não email)
         const { data: oData, error: oErr } = await supabase
             .from("orders")
-            .select("id, created_at, amount, status, items")
+            .select("id, created_at, amount, status, items_json")
             .eq("user_id", user.id)
             .order("created_at", { ascending: false })
             .limit(10)
@@ -300,6 +306,13 @@ export default function ProfilePage() {
                         ) : (
                             orders.map((order) => {
                                 const statusInfo = STATUS_MAP[order.status] || { label: order.status, color: "bg-zinc-800 text-zinc-400" }
+                                const items: OrderItem[] = order.items_json || []
+                                const firstItem = items[0]
+
+                                const totalItems = items.reduce(
+                                    (acc, item) => acc + (item.quantity || 1),
+                                    0
+                                )
                                 return (
                                     <div
                                         key={order.id}
@@ -310,8 +323,22 @@ export default function ProfilePage() {
                                             <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800">
                                                 <Package size={16} className="text-zinc-500" />
                                             </div>
+
                                             <div>
-                                                <p className="text-sm font-semibold text-white">#{order.id.slice(0, 8).toUpperCase()}</p>
+                                                <p className="text-sm font-semibold text-white">
+                                                    #{order.id.slice(0, 8).toUpperCase()}
+                                                </p>
+
+                                                {/* 🔥 NOME DO PRODUTO (AQUI) */}
+                                                <p className="text-[10px] text-zinc-500">
+                                                    {firstItem?.name || "Produto"} {items.length > 1 && `+${items.length - 1}`}
+                                                </p>
+
+                                                {/* 🔥 QUANTIDADE */}
+                                                <p className="text-[10px] text-zinc-500">
+                                                    {totalItems} item{totalItems > 1 ? "s" : ""}
+                                                </p>
+
                                                 <p className="text-[10px] text-zinc-500">
                                                     {new Date(order.created_at).toLocaleDateString("pt-BR")}
                                                 </p>

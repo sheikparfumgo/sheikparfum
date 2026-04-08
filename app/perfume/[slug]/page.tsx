@@ -588,7 +588,7 @@ export default function PerfumePage() {
 
                         </div>
 
-                        <div className="space-y-2 mt-4 min-h-[180px] max-h-[220px] overflow-y-auto">
+                        <div className="space-y-2 mt-2">
 
                             {loadingShipping && (
                                 <div className="space-y-2">
@@ -602,6 +602,7 @@ export default function PerfumePage() {
                                     Digite seu CEP para calcular o frete 🚚
                                 </div>
                             )}
+
 
                             {!loadingShipping && finalShippingList.length > 0 && (
                                 <>
@@ -797,7 +798,7 @@ export default function PerfumePage() {
 
             </div>
             {/* PIRÂMIDE */}
-            <div className="max-w-[1200px] mx-auto mt-16 space-y-6">
+            <div className="max-w-[1200px] mx-auto mt-4 space-y-4">
 
                 <h3 className="text-sm font-semibold text-primary uppercase">
                     Pirâmide olfativa
@@ -891,8 +892,6 @@ export default function PerfumePage() {
                                         href={`/perfume/${p.slug}`}
                                         products={parsedProducts}
                                         hasStock={p.has_stock}
-                                        youtube_url={p.youtube_url}
-                                        instagram_url={p.instagram_url}
                                     />
                                 )
 
