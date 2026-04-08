@@ -32,7 +32,10 @@ export default function OrderPage() {
             const {
                 data: { session }
             } = await supabase.auth.getSession()
-            if (!session?.access_token) return
+            if (!session?.access_token) {
+                setLoading(false)
+                return
+            }
             const res = await fetch(`/api/orders/${id}`, {
                 headers: {
                     Authorization: `Bearer ${session?.access_token}`
@@ -61,10 +64,14 @@ export default function OrderPage() {
 
         fetchOrder()
 
+        // 🔥 NÃO CONTINUA POLLING SE JÁ FINALIZADO
+        if (order?.status === "delivered") return
+
         const interval = setInterval(fetchOrder, 8000)
+
         return () => clearInterval(interval)
 
-    }, [id])
+    }, [id, order?.status])
 
     if (loading) {
         return (
@@ -209,7 +216,10 @@ export default function OrderPage() {
                 <div className="flex justify-between pt-3 border-t border-zinc-800">
                     <span className="text-sm text-zinc-400">Total</span>
                     <span className="text-lg font-bold text-[#d4af37]">
-                        R$ {Number(order.amount).toFixed(2)}
+                        {new Intl.NumberFormat("pt-BR", {
+                            style: "currency",
+                            currency: "BRL"
+                        }).format(order.amount)}
                     </span>
                 </div>
 
