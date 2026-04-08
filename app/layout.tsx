@@ -1,5 +1,4 @@
 import Sidebar from "@/components/home/Sidebar"
-
 import Header from "@/components/home/Header"
 import "@/app/globals.css"
 import AuthInitializer from "@/components/auth/AuthInitializer"
@@ -14,7 +13,11 @@ export default function RootLayout({
   return (
     <html lang="pt-br">
       <body className="bg-[#0F0F10] text-white">
+
+        {/* Inicializa auth */}
         <AuthInitializer />
+
+        {/* Toasts (independente de auth) */}
         <Toaster
           theme="dark"
           position="top-right"
@@ -27,6 +30,7 @@ export default function RootLayout({
           }}
         />
 
+        {/* Layout base */}
         <div className="flex min-h-screen w-full overflow-x-hidden">
 
           {/* Sidebar */}
@@ -35,32 +39,31 @@ export default function RootLayout({
           </aside>
 
           {/* Área principal */}
-          <div className="flex flex-col flex-1 w-full overflow-x-hidden md:ml-64">
+          <div className="flex flex-col flex-1 w-full overflow-x-hidden md:pl-64">
 
-            {/* Header fixo */}
-            <div className="sticky top-0 z-40">
-              <Header />
-            </div>
+            {/* Header */}
+            <Header />
 
             {/* Conteúdo */}
             <main
               className="
-              flex-1
-              w-full
-              max-w-full
-              px-3 sm:px-4 md:px-8
-              pb-28
-              overflow-x-hidden
-              "
+                  flex-1
+                  w-full
+                  max-w-full
+                  px-3 sm:px-4 md:px-8
+                  overflow-x-hidden
+                "
             >
               {children}
             </main>
+
+            {/* Footer */}
+            <Footer />
 
           </div>
 
         </div>
 
-        <Footer />
       </body>
     </html>
   )

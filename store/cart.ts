@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware"
 
 type CartItem = {
     id: string
+    perfume_id: string
     name: string
     price: number
     quantity: number

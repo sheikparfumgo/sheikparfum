@@ -6,6 +6,7 @@ type Profile = {
     full_name: string | null
     avatar_url: string | null
     email: string
+    role: "user" | "admin"
 }
 
 type AuthStore = {
@@ -34,26 +35,30 @@ export const useAuth = create<AuthStore>((set, get) => ({
     initialize: async () => {
         if (get().initialized) return
 
+        set({ loading: true })
+
         const { data: { session } } = await supabase.auth.getSession()
-        
-        if (session?.user) {
-            set({ user: session.user })
-            await get().fetchProfile(session.user.id)
-            await get().fetchFavorites(session.user.id)
+        const user = session?.user
+
+        if (user) {
+            set({ user })
+            await get().fetchProfile(user.id)
+            await get().fetchFavorites(user.id)
+        } else {
+            set({ user: null, profile: null, favorites: [] })
         }
 
         set({ loading: false, initialized: true })
 
-        // Listener de auth
-        supabase.auth.onAuthStateChange(async (event, session) => {
+        supabase.auth.onAuthStateChange(async (_, session) => {
             if (session?.user) {
-                set({ user: session.user })
+                set({ user: session.user, loading: true })
                 await get().fetchProfile(session.user.id)
                 await get().fetchFavorites(session.user.id)
+                set({ loading: false })
             } else {
-                set({ user: null, profile: null, favorites: [] })
+                set({ user: null, profile: null, favorites: [], loading: false })
             }
-            set({ loading: false })
         })
     },
 
@@ -76,7 +81,8 @@ export const useAuth = create<AuthStore>((set, get) => ({
                     id: user.id,
                     email: user.email!,
                     full_name: user.user_metadata?.full_name || user.email?.split("@")[0],
-                    avatar_url: user.user_metadata?.avatar_url || null
+                    avatar_url: user.user_metadata?.avatar_url || null,
+                    role: "user"
                 }
 
                 const { data: createdProfile } = await supabase
@@ -88,7 +94,12 @@ export const useAuth = create<AuthStore>((set, get) => ({
                 if (createdProfile) set({ profile: createdProfile })
             }
         } else {
-            set({ profile: data })
+            set({
+                profile: {
+                    ...data,
+                    role: data.role || "user"
+                }
+            })
         }
     },
 

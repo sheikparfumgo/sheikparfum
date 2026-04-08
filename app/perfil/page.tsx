@@ -5,32 +5,32 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
-import { 
-    User, Package, MapPin, Heart, Crown, 
-    Settings, LogOut, ChevronRight, Plus, 
-    Loader2, ShoppingBag, CreditCard, Camera, Trash2, 
+import {
+    User, Package, MapPin, Heart, Crown,
+    Settings, LogOut, ChevronRight, Plus,
+    Loader2, ShoppingBag, CreditCard, Camera, Trash2,
     CheckCircle2, Save, ExternalLink, Star, Pencil
 } from "lucide-react"
 import AddressModal from "@/components/profile/AddressModal"
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
-    paid:      { label: "Pago",      color: "bg-green-500/10 text-green-400" },
-    shipped:   { label: "Enviado",   color: "bg-blue-500/10 text-blue-400" },
-    delivered: { label: "Entregue",  color: "bg-emerald-500/10 text-emerald-400" },
-    pending:   { label: "Pendente",  color: "bg-orange-500/10 text-orange-400" },
+    paid: { label: "Pago", color: "bg-green-500/10 text-green-400" },
+    shipped: { label: "Enviado", color: "bg-blue-500/10 text-blue-400" },
+    delivered: { label: "Entregue", color: "bg-emerald-500/10 text-emerald-400" },
+    pending: { label: "Pendente", color: "bg-orange-500/10 text-orange-400" },
     cancelled: { label: "Cancelado", color: "bg-red-500/10 text-red-400" },
 }
 
 export default function ProfilePage() {
     const router = useRouter()
-    const { user, profile, updateProfile, signOut, favorites } = useAuth()
-    
+    const { user, profile, updateProfile, signOut, favorites, loading: authLoading } = useAuth()
+
     const [orders, setOrders] = useState<any[]>([])
     const [addresses, setAddresses] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [uploading, setUploading] = useState(false)
     const [savingName, setSavingName] = useState(false)
-    
+
     const [isAddressModalOpen, setIsAddressModalOpen] = useState(false)
     const [editingAddress, setEditingAddress] = useState<any>(null)
     const [isEditingName, setIsEditingName] = useState(false)
@@ -48,7 +48,7 @@ export default function ProfilePage() {
             .eq("user_id", user.id)
             .order("created_at", { ascending: false })
             .limit(10)
-        
+
         if (!oErr && oData) setOrders(oData)
 
         // 🏠 Buscar Endereços
@@ -57,20 +57,25 @@ export default function ProfilePage() {
             .select("*")
             .eq("user_id", user.id)
             .order("is_default", { ascending: false })
-        
+
         if (!aErr && aData) setAddresses(aData)
 
         setLoading(false)
     }
 
     useEffect(() => {
-        if (!user) {
-            router.push("/login")
-            return
-        }
+
+        if (authLoading) return
+
+        if (!user) return
+
         loadData()
-        if (profile) setNewName(profile.full_name || "")
-    }, [user, profile])
+
+        if (profile) {
+            setNewName(profile.full_name || "")
+        }
+
+    }, [user, profile, authLoading])
 
     const handleSaveAddress = async (formData: any) => {
         if (!user) return
@@ -152,6 +157,7 @@ export default function ProfilePage() {
         toast.success("Nome atualizado!")
     }
 
+    if (authLoading) return null
     if (!user) return null
 
     if (loading && !profile) {
@@ -164,7 +170,7 @@ export default function ProfilePage() {
 
     return (
         <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 space-y-10 animate-fade-in">
-            
+
             {/* ───────────────────────────────
                 1. CABEÇALHO EDITÁVEL
             ─────────────────────────────── */}
@@ -175,23 +181,23 @@ export default function ProfilePage() {
 
                 {/* Avatar */}
                 <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                    <img 
+                    <img
                         src={profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
-                        alt="Avatar" 
+                        alt="Avatar"
                         className="w-24 h-24 rounded-full border-2 border-[#c9a34a] shadow-[0_0_20px_rgba(201,163,74,0.3)] object-cover"
                     />
                     <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        {uploading 
-                            ? <Loader2 className="animate-spin text-white" size={20} /> 
+                        {uploading
+                            ? <Loader2 className="animate-spin text-white" size={20} />
                             : <Camera size={22} className="text-white" />
                         }
                     </div>
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        className="hidden" 
-                        accept="image/*" 
-                        onChange={handleAvatarUpload} 
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
                     />
                 </div>
 
@@ -200,24 +206,24 @@ export default function ProfilePage() {
                     <div className="flex items-center justify-center md:justify-start gap-2">
                         {isEditingName ? (
                             <div className="flex items-center gap-2">
-                                <input 
+                                <input
                                     autoFocus
                                     value={newName}
                                     onChange={e => setNewName(e.target.value)}
                                     onKeyDown={e => e.key === "Enter" && handleUpdateName()}
                                     className="bg-zinc-900 border border-[#c9a34a] rounded-lg px-3 py-1.5 text-white outline-none text-lg font-bold"
                                 />
-                                <button 
-                                    onClick={handleUpdateName} 
+                                <button
+                                    onClick={handleUpdateName}
                                     disabled={savingName}
                                     className="p-1.5 bg-green-500/10 text-green-400 rounded-lg hover:bg-green-500/20 transition"
                                 >
-                                    {savingName 
-                                        ? <Loader2 size={18} className="animate-spin" /> 
+                                    {savingName
+                                        ? <Loader2 size={18} className="animate-spin" />
                                         : <CheckCircle2 size={18} />
                                     }
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => setIsEditingName(false)}
                                     className="p-1.5 text-zinc-500 hover:text-white transition"
                                 >
@@ -229,7 +235,7 @@ export default function ProfilePage() {
                                 <h1 className="text-2xl font-bold text-white">
                                     {profile?.full_name || "Usuário Sheik"}
                                 </h1>
-                                <button 
+                                <button
                                     onClick={() => { setIsEditingName(true); setNewName(profile?.full_name || "") }}
                                     className="p-1 text-zinc-600 hover:text-[#c9a34a] transition rounded"
                                     title="Editar nome"
@@ -253,7 +259,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                
+
                 {/* ───────────────────────────────
                     2. MEUS PEDIDOS
                 ─────────────────────────────── */}
@@ -271,7 +277,7 @@ export default function ProfilePage() {
                     <div className="space-y-3">
                         {loading ? (
                             // Skeleton
-                            [1,2,3].map(i => (
+                            [1, 2, 3].map(i => (
                                 <div key={i} className="p-4 glass animate-pulse flex items-center gap-4">
                                     <div className="w-10 h-10 rounded-xl bg-zinc-800" />
                                     <div className="flex-1 space-y-2">
@@ -284,7 +290,7 @@ export default function ProfilePage() {
                             <div className="p-10 glass border-dashed bg-transparent text-center">
                                 <ShoppingBag className="mx-auto mb-3 text-zinc-700" size={36} />
                                 <p className="text-sm text-zinc-500 mb-4">Ainda não há pedidos.</p>
-                                <button 
+                                <button
                                     onClick={() => router.push("/loja")}
                                     className="text-xs text-[#c9a34a] hover:brightness-125 font-bold uppercase tracking-widest"
                                 >
@@ -295,8 +301,8 @@ export default function ProfilePage() {
                             orders.map((order) => {
                                 const statusInfo = STATUS_MAP[order.status] || { label: order.status, color: "bg-zinc-800 text-zinc-400" }
                                 return (
-                                    <div 
-                                        key={order.id} 
+                                    <div
+                                        key={order.id}
                                         onClick={() => router.push(`/pedido/${order.id}`)}
                                         className="p-4 glass hover:border-[#c9a34a]/40 transition-all flex items-center justify-between group cursor-pointer"
                                     >
@@ -338,7 +344,7 @@ export default function ProfilePage() {
                             <MapPin size={20} />
                             Endereços
                         </h2>
-                        <button 
+                        <button
                             onClick={() => { setEditingAddress(null); setIsAddressModalOpen(true); }}
                             className="flex items-center gap-1.5 text-xs text-[#c9a34a] hover:brightness-125 font-bold uppercase tracking-widest transition"
                         >
@@ -349,7 +355,7 @@ export default function ProfilePage() {
 
                     <div className="space-y-3">
                         {loading ? (
-                            [1,2].map(i => (
+                            [1, 2].map(i => (
                                 <div key={i} className="p-5 glass animate-pulse flex items-start gap-4">
                                     <div className="w-10 h-10 rounded-xl bg-zinc-800" />
                                     <div className="flex-1 space-y-2">
@@ -362,7 +368,7 @@ export default function ProfilePage() {
                             <div className="p-10 glass border-dashed bg-transparent text-center">
                                 <MapPin className="mx-auto mb-3 text-zinc-700" size={36} />
                                 <p className="text-sm text-zinc-500 mb-4">Nenhum endereço salvo.</p>
-                                <button 
+                                <button
                                     onClick={() => { setEditingAddress(null); setIsAddressModalOpen(true); }}
                                     className="text-xs text-[#c9a34a] hover:brightness-125 font-bold uppercase tracking-widest"
                                 >
@@ -389,7 +395,7 @@ export default function ProfilePage() {
                                             {addr.neighborhood && `${addr.neighborhood} · `}{addr.city} - {addr.state} · CEP {addr.zip_code}
                                         </p>
                                         {!addr.is_default && (
-                                            <button 
+                                            <button
                                                 onClick={() => handleSetDefault(addr.id)}
                                                 className="text-[10px] text-zinc-600 hover:text-[#c9a34a] transition font-medium mt-1"
                                             >
@@ -398,15 +404,15 @@ export default function ProfilePage() {
                                         )}
                                     </div>
                                     <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
-                                            onClick={() => { setEditingAddress(addr); setIsAddressModalOpen(true); }} 
+                                        <button
+                                            onClick={() => { setEditingAddress(addr); setIsAddressModalOpen(true); }}
                                             className="text-zinc-500 hover:text-white transition p-1"
                                             title="Editar"
                                         >
                                             <Pencil size={14} />
                                         </button>
-                                        <button 
-                                            onClick={() => handleDeleteAddress(addr.id)} 
+                                        <button
+                                            onClick={() => handleDeleteAddress(addr.id)}
                                             className="text-zinc-700 hover:text-red-500 transition p-1"
                                             title="Excluir"
                                         >
@@ -425,8 +431,8 @@ export default function ProfilePage() {
                 4. ATALHOS RÁPIDOS
             ─────────────────────────────── */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <button 
-                    onClick={() => router.push("/lista")} 
+                <button
+                    onClick={() => router.push("/lista")}
                     className="flex flex-col items-center gap-3 p-8 glass hover:border-[#c9a34a]/60 group transition-all h-full"
                 >
                     <div className="relative">
@@ -442,8 +448,8 @@ export default function ProfilePage() {
                         <span className="text-[10px] text-zinc-500 mt-0.5 block">{favorites.length} perfume{favorites.length !== 1 ? "s" : ""}</span>
                     </div>
                 </button>
-                <button 
-                    onClick={() => router.push("/clube")} 
+                <button
+                    onClick={() => router.push("/clube")}
                     className="flex flex-col items-center gap-3 p-8 glass border-[#c9a34a]/30 hover:border-[#c9a34a]/60 group transition-all h-full"
                 >
                     <Crown className="text-[#c9a34a] group-hover:scale-110 transition-transform" size={28} />
@@ -463,7 +469,7 @@ export default function ProfilePage() {
 
             {/* LOGOUT */}
             <div className="pt-6 flex justify-center">
-                <button 
+                <button
                     onClick={signOut}
                     className="flex items-center gap-2 px-10 py-4 rounded-2xl border border-red-500/20 text-red-500/60 hover:text-red-500 hover:bg-red-500/5 transition-all font-bold text-xs uppercase tracking-[0.2em]"
                 >
@@ -472,7 +478,7 @@ export default function ProfilePage() {
                 </button>
             </div>
 
-            <AddressModal 
+            <AddressModal
                 isOpen={isAddressModalOpen}
                 onClose={() => setIsAddressModalOpen(false)}
                 initialData={editingAddress}

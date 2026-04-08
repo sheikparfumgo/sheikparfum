@@ -5,7 +5,8 @@ export async function getPerfumes(
     limit = 10,
     offset = 0,
     brand?: string,
-    order?: string
+    order?: string,
+    onlyInStock?: boolean // 👈 NOVO
 ) {
     const params = new URLSearchParams();
 
@@ -14,6 +15,7 @@ export async function getPerfumes(
 
     if (brand) params.append("brand", brand);
     if (order) params.append("order", order);
+    if (onlyInStock) params.append("inStock", "true"); // 👈 NOVO
 
     const res = await fetch(`${BASE_URL}?${params.toString()}`, {
         cache: "no-store",
@@ -29,7 +31,7 @@ export async function getPerfumes(
 // 🔥 BUSCAR POR IDs (FAVORITOS)
 export async function getPerfumesByIds(ids: string[]) {
     if (ids.length === 0) return [];
-    
+
     const res = await fetch(`${BASE_URL}?ids=${ids.join(",")}`, {
         cache: "no-store",
     });

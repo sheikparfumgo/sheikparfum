@@ -1,49 +1,68 @@
-import RadarSection from "./RadarSection"
-import RadarCarousel from "./RadarCarousel"
-import PerfumeCard from "@/components/perfume/PerfumeCard"
+"use client"
 
-const perfumes = [
-    {
-        slug: "oud-wood",
-        name: "Oud Wood",
-        brand: "Tom Ford",
-        image: "/perfumes/oudwood.png",
-        likes: 12000,
-    },
-    {
-        slug: "layton",
-        name: "Layton",
-        brand: "Parfums de Marly",
-        image: "/perfumes/layton.png",
-        likes: 9800,
-    },
-    {
-        slug: "bleu-de-chanel",
-        name: "Bleu de Chanel",
-        brand: "Chanel",
-        image: "/perfumes/bleu.png",
-        likes: 15000,
-    },
-]
+import { useState } from "react"
+import RadarSection from "@/components/radar/RadarSection"
+import RadarCarousel from "@/components/radar/RadarCarousel"
+import RadarPerfumeCard from "@/components/radar/RadarPerfumeCard"
+import ReviewModal from "@/components/radar/ReviewModal"
 
-export default function RadarFeed() {
+type Perfume = {
+    perfume_id: string
+    perfume_name: string
+    brand: string
+    slug: string
+    image_main: string
+    youtube_url?: string | null
+    instagram_url?: string | null
+    top_notes?: string[]
+    heart_notes?: string[]
+    base_notes?: string[]
+}
+
+export default function RadarFeed({ perfumes, title }: { perfumes: Perfume[], title?: string }) {
+
+    const [selected, setSelected] = useState<Perfume | null>(null)
+
+    // 🔥 FILTRO ROBUSTO
+    const onlyWithVideos = perfumes.filter((p) => {
+        const yt = typeof p.youtube_url === "string" ? p.youtube_url.trim() : ""
+        const ig = typeof p.instagram_url === "string" ? p.instagram_url.trim() : ""
+
+        return yt !== "" || ig !== ""
+    })
+
+    console.log("TOTAL:", perfumes.length)
+    console.log("COM VIDEO:", onlyWithVideos.length)
+    console.log("LISTA:", onlyWithVideos)
+
     return (
         <div className="space-y-10">
 
             <RadarSection
-                title="🔥 Em alta"
-                subtitle="Perfumes populares no radar"
+                title={title || "Em alta"}
+                subtitle="Perfumes com review disponível"
             >
+
+                {/* 🔥 DEBUG VISUAL */}
+                {onlyWithVideos.length === 0 && (
+                    <p className="text-red-500 text-sm">
+                        Nenhum perfume com vídeo encontrado
+                    </p>
+                )}
+
                 <RadarCarousel>
 
-                    {perfumes.map((perfume) => (
+                    {onlyWithVideos.map((perfume) => (
 
-                        <PerfumeCard
-                            key={perfume.slug}
-                            name={perfume.name}
+                        <RadarPerfumeCard
+                            key={perfume.perfume_id}
+                            id={perfume.perfume_id}
+                            name={perfume.perfume_name}
                             brand={perfume.brand}
-                            image={perfume.image}
-                            href={`/perfume/${perfume.slug}`}
+                            image={perfume.image_main}
+                            youtube_url={perfume.youtube_url ?? undefined}
+                            instagram_url={perfume.instagram_url ?? undefined}
+                            onOpen={() => setSelected(perfume)}
                         />
 
                     ))}
@@ -51,26 +70,11 @@ export default function RadarFeed() {
                 </RadarCarousel>
             </RadarSection>
 
-            <RadarSection
-                title="💎 Nicho recomendado"
-                subtitle="Perfumes exclusivos para explorar"
-            >
-                <RadarCarousel>
-
-                    {perfumes.map((perfume) => (
-
-                        <PerfumeCard
-                            key={perfume.slug + "-niche"}
-                            name={perfume.name}
-                            brand={perfume.brand}
-                            image={perfume.image}
-                            href={`/perfume/${perfume.slug}`}
-                        />
-
-                    ))}
-
-                </RadarCarousel>
-            </RadarSection>
+            <ReviewModal
+                open={!!selected}
+                onClose={() => setSelected(null)}
+                perfume={selected}
+            />
 
         </div>
     )

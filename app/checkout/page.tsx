@@ -5,6 +5,8 @@ import { useCart } from "@/store/cart"
 import { useRouter } from "next/navigation"
 import { initMercadoPago } from "@mercadopago/sdk-react"
 import { CardPayment } from "@mercadopago/sdk-react"
+import { supabase } from "@/lib/supabase/client"
+import { useMemo } from "react"
 
 export default function CheckoutPage() {
 
@@ -17,8 +19,8 @@ export default function CheckoutPage() {
     const [timeLeft, setTimeLeft] = useState(0)
     const items = useCart((s) => s.items)
     const total = useCart((s) => s.getTotalWithShipping())
-    const safeTotal = Math.round(Number(total) * 100) / 100
     const subtotal = useCart((s) => s.getTotal())
+    const safeTotal = Math.round(Number(total) * 100) / 100
 
     const [step, setStep] = useState(1)
     const [loading, setLoading] = useState(false)
@@ -30,6 +32,13 @@ export default function CheckoutPage() {
     const setAddressGlobal = useCart((s) => s.setAddress)
     const maxInstallments = getInstallmentLimit(items, safeTotal)
     const [orderId, setOrderId] = useState<string | null>(null)
+
+    const [couponCode, setCouponCode] = useState("")
+    const [couponData, setCouponData] = useState<any>(null)
+    const [couponError, setCouponError] = useState("")
+    const [discountValue, setDiscountValue] = useState(0)
+
+    const totalWithCoupon = Math.max(0, safeTotal - discountValue)
 
     const [address, setAddress] = useState({
         cep: savedAddress?.cep || "",
@@ -49,6 +58,79 @@ export default function CheckoutPage() {
         phone: "",
         cpf: ""
     })
+
+    const cardInit = useMemo(() => ({
+        amount: safeTotal,
+        payer: {
+            email: user.email,
+            first_name: user.name?.split(" ")[0] || "",
+            last_name: user.name?.split(" ").slice(1).join(" ") || "",
+            identification: {
+                type: "CPF",
+                number: user.cpf.replace(/\D/g, "")
+            }
+        }
+    }), [safeTotal, user.email, user.cpf, user.name])
+
+    const cardCustomization = useMemo(() => ({
+        paymentMethods: {
+            minInstallments: 1,
+            maxInstallments: maxInstallments
+        }
+    }), [maxInstallments])
+
+    useEffect(() => {
+        async function loadAddress() {
+            const {
+                data: { session }
+            } = await supabase.auth.getSession()
+
+            if (!session?.access_token) return
+
+            const res = await fetch("/api/address/me", {
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`
+                }
+            })
+
+            const data = await res.json()
+
+            if (!data.address) return
+
+            const addr = data.address
+
+            const formatted = {
+                cep: addr.cep || "",
+                street: addr.street || "",
+                city: addr.city || "",
+                state: addr.state || "",
+                number: addr.number || "",
+                complement: addr.complement || ""
+            }
+
+            setAddress(formatted)
+            setAddressGlobal(formatted) // mantém no carrinho também
+        }
+
+        loadAddress()
+    }, [])
+
+    useEffect(() => {
+        async function loadUser() {
+            const {
+                data: { user: authUser }
+            } = await supabase.auth.getUser()
+
+            if (!authUser) return
+
+            setUser((prev) => ({
+                ...prev,
+                email: authUser.email || ""
+            }))
+        }
+
+        loadUser()
+    }, [])
 
     useEffect(() => {
         const STORAGE_KEY = "checkout_timer_session"
@@ -111,17 +193,56 @@ export default function CheckoutPage() {
 
     const color = getTimerColor()
 
+    async function applyCoupon() {
+        try {
+            setCouponError("")
+
+            const res = await fetch("/api/coupons/validate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    code: couponCode,
+                    perfume_id: items[0]?.perfume_id || null,
+                    user_id: null
+                })
+            })
+
+            const data = await res.json()
+
+            if (!res.ok || !data.valid) {
+                throw new Error(data.error || "Cupom inválido")
+            }
+
+            const discount = (safeTotal * data.discount) / 100
+
+            setCouponData(data.coupon)
+            setDiscountValue(discount)
+
+        } catch (err: any) {
+            setCouponError(err.message)
+            setCouponData(null)
+            setDiscountValue(0)
+        }
+    }
+
     async function createOrder(paymentMethod: string) {
         // 🔒 evita criar pedido duplicado
         if (orderId) return orderId
 
+        const {
+            data: { session }
+        } = await supabase.auth.getSession()
+
         const res = await fetch("/api/orders", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session?.access_token}`
             },
             body: JSON.stringify({
-                amount: safeTotal,
+                amount: totalWithCoupon,
+                coupon_id: couponData?.id || null,
+                discount: discountValue,
                 items,
                 user,
                 shipping,
@@ -159,7 +280,7 @@ export default function CheckoutPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     order_id: id,
-                    amount: safeTotal,
+                    amount: totalWithCoupon,
                     payment_method_id: "pix",
                     cpf: cleanCpf,
                     email: user.email,
@@ -176,7 +297,7 @@ export default function CheckoutPage() {
 
             setPixData(data)
             // 🔥 Removido o redirecionamento automático para o usuário poder ler o QR code
-            
+
         } catch (err: any) {
             setError(err.message)
         } finally {
@@ -504,7 +625,7 @@ export default function CheckoutPage() {
                                     setError("Por favor, insira um CPF válido com 11 dígitos")
                                     return
                                 }
-                                
+
                                 setError("")
                                 setStep(2)
                             }}>
@@ -665,8 +786,8 @@ export default function CheckoutPage() {
                             <button
                                 onClick={() => setSelectedPayment("pix")}
                                 className={`flex-1 py-3 rounded-xl border transition-all text-sm font-semibold flex items-center justify-center gap-2 ${selectedPayment === "pix"
-                                        ? "border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]"
-                                        : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                                    ? "border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]"
+                                    : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-white"
                                     }`}
                             >
                                 ⚡ PIX (Aprovação rápida)
@@ -674,8 +795,8 @@ export default function CheckoutPage() {
                             <button
                                 onClick={() => setSelectedPayment("card")}
                                 className={`flex-1 py-3 rounded-xl border transition-all text-sm font-semibold flex items-center justify-center gap-2 ${selectedPayment === "card"
-                                        ? "border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]"
-                                        : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                                    ? "border-[#d4af37] bg-[#d4af37]/10 text-[#d4af37]"
+                                    : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-white"
                                     }`}
                             >
                                 💳 Cartão de Crédito
@@ -685,7 +806,7 @@ export default function CheckoutPage() {
                         {error && (
                             <p className="text-red-400 text-sm mb-4">{error}</p>
                         )}
-                        
+
                         {(!user.email || !user.cpf || !user.name) && (
                             <p className="text-xs text-red-400 mb-4">
                                 Preencha seus dados para liberar o pagamento
@@ -706,7 +827,7 @@ export default function CheckoutPage() {
                                         <p className="text-sm font-semibold text-white">
                                             Seu QR Code foi gerado!
                                         </p>
-                                        
+
                                         <div className="bg-white rounded-xl inline-block p-4">
                                             <img
                                                 src={`data:image/png;base64,${pixData.qr_code_base64}`}
@@ -718,12 +839,12 @@ export default function CheckoutPage() {
                                         <p className="text-xs text-zinc-400">
                                             Abra o app do seu banco e escaneie o código acima ou copie o código PIX:
                                         </p>
-                                        
+
                                         <div className="bg-zinc-950 p-3 rounded-lg flex items-center justify-between border border-zinc-800">
                                             <p className="text-xs truncate max-w-[200px] md:max-w-xs text-zinc-500">
                                                 {pixData.qr_code}
                                             </p>
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     navigator.clipboard.writeText(pixData.qr_code)
                                                     alert("Código copiado!")
@@ -756,22 +877,9 @@ export default function CheckoutPage() {
                                 <div className="mt-2 bg-zinc-950/50 rounded-xl overflow-hidden p-2">
                                     <div className="card-payment-wrapper">
                                         <CardPayment
-                                            initialization={{
-                                                amount: safeTotal,
-                                                payer: {
-                                                    email: user.email,
-                                                    identification: {
-                                                        type: "CPF",
-                                                        number: user.cpf.replace(/\D/g, "")
-                                                    }
-                                                }
-                                            }}
-                                            customization={{
-                                                paymentMethods: {
-                                                    minInstallments: 1,
-                                                    maxInstallments: maxInstallments
-                                                }
-                                            }}
+                                            initialization={cardInit}
+                                            customization={cardCustomization}
+
                                             onSubmit={async (data) => {
                                                 try {
                                                     if (!user.email || !user.cpf || !user.name) {
@@ -824,7 +932,7 @@ export default function CheckoutPage() {
                                         />
                                     </div>
                                 </div>
-                                
+
                                 {loading && (
                                     <p className="text-xs text-zinc-400 flex items-center justify-center gap-2">
                                         <span className="animate-spin w-4 h-4 border-2 border-[#d4af37] border-t-transparent rounded-full" />
@@ -843,9 +951,31 @@ export default function CheckoutPage() {
                     </p>
 
                     <div className="flex gap-2">
-                        <Input placeholder="Digite seu cupom" />
-                        <button className="btn-secondary">Aplicar</button>
+                        <Input
+                            placeholder="Digite seu cupom"
+                            value={couponCode}
+                            onChange={(e: any) => setCouponCode(e.target.value)}
+                        />
+
+                        <button
+                            onClick={applyCoupon}
+                            className="btn-secondary"
+                        >
+                            Aplicar
+                        </button>
                     </div>
+
+                    {couponError && (
+                        <p className="text-red-400 text-xs mt-2">
+                            {couponError}
+                        </p>
+                    )}
+
+                    {couponData && (
+                        <p className="text-green-400 text-xs mt-2">
+                            Cupom aplicado: -R$ {discountValue.toFixed(2)}
+                        </p>
+                    )}
                 </Card>
 
             </div>
@@ -865,8 +995,8 @@ export default function CheckoutPage() {
                                 </p>
                             </div>
 
-                            <span className="text-[#d4af37] font-semibold">
-                                R$ {(item.price * item.quantity).toFixed(2)}
+                            <span className="text-[#d4af37]">
+                                R$ {totalWithCoupon.toFixed(2)}
                             </span>
                         </div>
                     ))}
@@ -890,7 +1020,7 @@ export default function CheckoutPage() {
                     <div className="flex justify-between text-lg font-bold border-t border-zinc-800 pt-2">
                         <span>Total</span>
                         <span className="text-[#d4af37]">
-                            R$ {total.toFixed(2)}
+                            R$ {totalWithCoupon.toFixed(2)}
                         </span>
                     </div>
                 </Card>

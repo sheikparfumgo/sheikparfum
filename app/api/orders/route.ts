@@ -1,56 +1,119 @@
 import { NextResponse } from "next/server"
-import { supabaseAdmin } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
 
 export async function POST(req: Request) {
     try {
+        const authHeader = req.headers.get("authorization")
+
+        // 🔒 1. Garantir que tem token
+        if (!authHeader) {
+            return NextResponse.json(
+                { error: "Não autenticado" },
+                { status: 401 }
+            )
+        }
+
+        // 🔒 2. Criar client COM contexto do usuário
+        const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                global: {
+                    headers: {
+                        Authorization: authHeader
+                    }
+                }
+            }
+        )
+
+        // 🔒 3. Pegar usuário REAL
+        const {
+            data: { user },
+            error: userError
+        } = await supabase.auth.getUser()
+
+        if (userError || !user) {
+            return NextResponse.json(
+                { error: "Usuário inválido" },
+                { status: 401 }
+            )
+        }
+
+        // 📦 4. Body
         const body = await req.json()
 
-        if (!body.items?.length) {
-            return NextResponse.json({ error: "Carrinho vazio" }, { status: 400 })
+        const {
+            items,
+            user: userFromBody,
+            amount,
+            shipping,
+            payment_method,
+            coupon_id,
+            discount
+        } = body
+
+        // 🔒 validações
+        if (!items?.length) {
+            return NextResponse.json(
+                { error: "Carrinho vazio" },
+                { status: 400 }
+            )
         }
 
-        if (!body.user?.email || !body.user?.name) {
-            return NextResponse.json({ error: "Dados do usuário inválidos" }, { status: 400 })
+        if (!userFromBody?.email || !userFromBody?.name) {
+            return NextResponse.json(
+                { error: "Dados do usuário inválidos" },
+                { status: 400 }
+            )
         }
 
-        console.log("Iniciando criação de pedido para:", body.user.email);
+        const cleanCpf = userFromBody.cpf?.replace(/\D/g, "") || null
 
-        const cleanCpf = body.user.cpf.replace(/\D/g, "");
-
-        const { data: order, error: orderError } = await supabaseAdmin
+        // ✅ 5. INSERT COM user_id REAL
+        const { data: order, error } = await supabase
             .from("orders")
             .insert([
                 {
-                    amount: Number(body.amount),
-                    customer_name: body.user.name,
-                    customer_email: body.user.email,
+                    user_id: user.id, // 🔥 ESSENCIAL
+
+                    amount: Number(amount),
+                    original_amount: Number(amount) + Number(discount || 0),
+                    discount: Number(discount || 0),
+                    coupon_id: coupon_id || null,
+
+                    customer_name: userFromBody.name,
+                    customer_email: userFromBody.email,
                     customer_cpf: cleanCpf,
-                    shipping: body.shipping || {},
-                    payment_method: body.payment_method || "unknown",
+
+                    shipping: shipping || {},
+                    payment_method: payment_method || "unknown",
+
                     status: "pending",
-                    items_json: body.items // Snapshot completo em items_json
+                    items_json: items
                 }
             ])
             .select()
             .single()
 
-        if (orderError) {
-            console.error("Erro ao criar pedido (Supabase):", orderError);
-            return NextResponse.json({ 
-                error: "Erro no banco ao criar pedido", 
-                details: orderError.message 
-            }, { status: 500 });
+        if (error) {
+            console.error(error)
+
+            return NextResponse.json(
+                { error: "Erro ao criar pedido", details: error.message },
+                { status: 500 }
+            )
         }
 
         return NextResponse.json({
-            id: order.id, 
+            id: order.id,
             status: order.status
         })
 
     } catch (err: any) {
-        console.error("ERRO GERAL API ORDERS:", err)
+        console.error(err)
+
         return NextResponse.json(
-            { error: "Erro interno ao processar pedido", details: err.message },
+            { error: "Erro interno", details: err.message },
             { status: 500 }
         )
     }

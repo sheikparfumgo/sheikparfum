@@ -730,6 +730,7 @@ export default function PerfumePage() {
 
                                             addToCart({
                                                 id: `${perfume.perfume_id}-${selected.size_ml}`,
+                                                perfume_id: perfume.perfume_id,
                                                 name: perfume.perfume_name,
                                                 price: unitPrice,
                                                 quantity: quantity,
@@ -753,6 +754,7 @@ export default function PerfumePage() {
 
                                             addToCart({
                                                 id: `${perfume.perfume_id}-${selected.size_ml}`,
+                                                perfume_id: perfume.perfume_id,
                                                 name: perfume.perfume_name,
                                                 price: unitPrice,
                                                 quantity,
@@ -889,6 +891,8 @@ export default function PerfumePage() {
                                         href={`/perfume/${p.slug}`}
                                         products={parsedProducts}
                                         hasStock={p.has_stock}
+                                        youtube_url={p.youtube_url}
+                                        instagram_url={p.instagram_url}
                                     />
                                 )
 

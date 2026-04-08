@@ -11,6 +11,8 @@ type Perfume = {
     brand: string
     image: string
     hype?: boolean
+    youtube_url?: string
+    instagram_url?: string
 }
 
 export default function ClubeDashboard() {
@@ -151,6 +153,8 @@ export default function ClubeDashboard() {
                                 featured={perfume.id === 2}
                                 actionLabel="Escolher"
                                 onAction={() => setChosenPerfume(perfume.id)}
+                                youtube_url={perfume.youtube_url}
+                                instagram_url={perfume.instagram_url}
                             />
 
                         )

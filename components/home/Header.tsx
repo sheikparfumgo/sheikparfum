@@ -5,13 +5,21 @@ import { useEffect, useRef, useState } from "react"
 import Sidebar from "@/components/home/Sidebar"
 import { useCart } from "@/store/cart"
 import { useAuth } from "@/hooks/useAuth"
+import { useRouter } from "next/navigation"
 
 export default function Header() {
-    const { user, profile } = useAuth()
+    const { user, profile, loading } = useAuth()
+    const router = useRouter()
     const [scrolled, setScrolled] = useState(false)
     const [menuOpen, setMenuOpen] = useState(false)
     const [searchOpen, setSearchOpen] = useState(false)
     const [cartOpen, setCartOpen] = useState(false)
+
+    const userDesktopRef = useRef<HTMLDivElement>(null)
+    const userMobileRef = useRef<HTMLDivElement>(null)
+
+    const [userMenuOpen, setUserMenuOpen] = useState(false)
+    const userRef = useRef<HTMLDivElement>(null)
 
     const searchRef = useRef<HTMLDivElement>(null)
     const cartRef = useRef<HTMLDivElement>(null)
@@ -19,6 +27,19 @@ export default function Header() {
     const updateQuantity = useCart((state) => state.updateQuantity)
     const removeItem = useCart((state) => state.removeItem)
     const items = useCart((state) => state.items)
+
+    const handleUserClick = () => {
+        if (!user) {
+            router.push("/login")
+            return
+        }
+
+        setUserMenuOpen((prev) => !prev)
+    }
+
+    useEffect(() => {
+        console.log("HEADER STATE →", { user, loading, profile })
+    }, [user, loading, profile])
 
     useEffect(() => {
         const handleScroll = () => {
@@ -32,13 +53,16 @@ export default function Header() {
 
     useEffect(() => {
         function handleClickOutside(e: any) {
-            if (searchRef.current && !searchRef.current.contains(e.target)) {
-                setSearchOpen(false)
-            }
-            if (cartRef.current && !cartRef.current.contains(e.target)) {
-                setCartOpen(false)
+            if (
+                userDesktopRef.current &&
+                !userDesktopRef.current.contains(e.target) &&
+                userMobileRef.current &&
+                !userMobileRef.current.contains(e.target)
+            ) {
+                setUserMenuOpen(false)
             }
         }
+
         document.addEventListener("mousedown", handleClickOutside)
         return () => {
             document.removeEventListener("mousedown", handleClickOutside)
@@ -53,11 +77,10 @@ export default function Header() {
         h-16
         flex items-center justify-end
         px-3 sm:px-4 md:px-8
-        sticky top-0
-        z-40
+        fixed top-0 left-0 right-0 z-50 
         transition-all duration-300
         ${scrolled
-                        ? "backdrop-blur-xl bg-[#111112]/80 border-b border-[#2a2a2a] shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+                        ? "bg-[#111112]/90 border-b border-[#2a2a2a] shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
                         : "bg-[#111112]"
                     }
       `}
@@ -304,90 +327,194 @@ export default function Header() {
 
                     {user ? (
 
-                        <div
-                            onClick={() => window.location.href = "/perfil"}
-                            className="
-               hidden md:flex
-               items-center gap-2
-               px-2 py-1
-               rounded-full
-               bg-[#1c1c1e]
-               border border-[#2a2a2a]
-               hover:border-[#c9a34a]/40
-               cursor-pointer
-               transition
-             "
-                        >
+                        <div ref={userDesktopRef} className="relative">
 
-                            <img
-                                src={profile?.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + user?.email}
-                                className="w-7 h-7 rounded-full"
-                            />
+                            {/* BOTÃO */}
+                            <div
+                                onClick={handleUserClick}
+                                className={`
+                hidden md:flex
+                items-center gap-2
+                px-2 py-1
+                rounded-full
+                bg-[#1c1c1e]
+                border border-[#2a2a2a]
+                hover:border-[#c9a34a]/40
+                cursor-pointer
+                transition
+                ${loading || !profile ? "opacity-50 pointer-events-none" : ""}
+            `}
+                            >
 
-                            <span className="text-sm text-gray-300 pr-2">
-                                {profile?.full_name || user?.email}
-                            </span>
+                                <img
+                                    src={profile?.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + user?.email}
+                                    className="w-7 h-7 rounded-full"
+                                />
+
+                                <span className="text-sm text-gray-300 pr-2">
+                                    {profile?.full_name || user?.email}
+                                </span>
+
+                            </div>
+
+                            {/* DROPDOWN */}
+                            {userMenuOpen && (
+                                <div className="
+                absolute right-0 mt-3 w-48
+                bg-[#1a1a1c]
+                border border-[#2a2a2a]
+                rounded-xl
+                z-50
+                shadow-xl
+                overflow-hidden
+            ">
+
+                                    <button
+                                        onClick={() => {
+                                            setUserMenuOpen(false)
+                                            setTimeout(() => router.push("/perfil"), 50)
+                                        }}
+                                        className="w-full text-left px-4 py-3 text-sm hover:bg-[#2a2a2a]"
+                                    >
+                                        Meu Perfil
+                                    </button>
+
+                                    {profile?.role === "admin" && (
+                                        <button
+                                            onClick={() => {
+                                                setUserMenuOpen(false)
+                                                setTimeout(() => router.push("/admin"), 50)
+                                            }}
+                                            className="w-full text-left px-4 py-3 text-sm hover:bg-[#2a2a2a]"
+                                        >
+                                            Painel Admin
+                                        </button>
+                                    )}
+
+                                    <div className="h-px bg-[#2a2a2a]" />
+
+                                    <button
+                                        onClick={async () => {
+                                            await useAuth.getState().signOut()
+                                        }}
+                                        className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-[#2a2a2a]"
+                                    >
+                                        Sair
+                                    </button>
+
+                                </div>
+                            )}
 
                         </div>
 
                     ) : (
 
                         <button
-                            onClick={() => window.location.href = "/login"}
+                            onClick={handleUserClick}
                             className="
-    hidden md:flex
-    items-center
-    px-6 py-2.5
-    rounded-full
-    font-semibold
-    text-black
-    bg-gradient-to-r from-[#c9a34a] to-[#e0b95b]
-    shadow-lg shadow-[#c9a34a]/20
-    hover:scale-105
-    hover:shadow-[#c9a34a]/40
-    transition
-  "
+            hidden md:flex
+            items-center
+            px-6 py-2.5
+            rounded-full
+            font-semibold
+            text-black
+            bg-gradient-to-r from-[#c9a34a] to-[#e0b95b]
+            shadow-lg shadow-[#c9a34a]/20
+            hover:scale-105
+            hover:shadow-[#c9a34a]/40
+            transition
+        "
                         >
                             Login / Cadastrar
                         </button>
 
                     )}
 
-                    {/* Mobile login */}
-
                     {user ? (
 
-                        <button
-                            onClick={() => window.location.href = "/perfil"}
-                            className="
-    md:hidden
-    w-10 h-10
-    flex items-center justify-center
-    rounded-xl
-    bg-[#1c1c1e]
-    border border-[#2a2a2a]
-    overflow-hidden
-  "
-                        >
-                            <img
-                                src={profile?.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + user?.email}
-                                alt="avatar"
-                                className="w-8 h-8 rounded-full"
-                            />
-                        </button>
+                        <div ref={userMobileRef} className="relative md:hidden">
+
+                            {/* BOTÃO MOBILE */}
+                            <button
+                                onClick={handleUserClick}
+                                className={`
+                w-10 h-10
+                flex items-center justify-center
+                rounded-xl
+                bg-[#1c1c1e]
+                border border-[#2a2a2a]
+                ${loading || !profile ? "opacity-50 pointer-events-none" : ""}
+            `}
+                            >
+                                <img
+                                    src={profile?.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + user?.email}
+                                    alt="avatar"
+                                    className="w-8 h-8 rounded-full"
+                                />
+                            </button>
+
+                            {/* DROPDOWN MOBILE */}
+                            {userMenuOpen && (
+                                <div className="
+                absolute right-0 mt-3 w-48
+                bg-[#1a1a1c]
+                border border-[#2a2a2a]
+                rounded-xl
+                z-50
+                shadow-xl
+                overflow-hidden
+            ">
+
+                                    <button
+                                        onClick={() => {
+                                            setUserMenuOpen(false)
+                                            setTimeout(() => router.push("/perfil"), 50)
+                                        }}
+                                        className="w-full text-left px-4 py-3 text-sm hover:bg-[#2a2a2a]"
+                                    >
+                                        Meu Perfil
+                                    </button>
+
+                                    {profile?.role === "admin" && (
+                                        <button
+                                            onClick={() => {
+                                                setUserMenuOpen(false)
+                                                setTimeout(() => router.push("/admin"), 50)
+                                            }}
+                                            className="w-full text-left px-4 py-3 text-sm hover:bg-[#2a2a2a]"
+                                        >
+                                            Painel Admin
+                                        </button>
+                                    )}
+
+                                    <div className="h-px bg-[#2a2a2a]" />
+
+                                    <button
+                                        onClick={async () => {
+                                            await useAuth.getState().signOut()
+                                        }}
+                                        className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-[#2a2a2a]"
+                                    >
+                                        Sair
+                                    </button>
+
+                                </div>
+                            )}
+
+                        </div>
 
                     ) : (
 
                         <button
-                            onClick={() => window.location.href = "/login"}
+                            onClick={() => router.push("/login")}
                             className="
-    md:hidden
-    w-10 h-10
-    flex items-center justify-center
-    rounded-xl
-    bg-[#1c1c1e]
-    border border-[#2a2a2a]
-  "
+            md:hidden
+            w-10 h-10
+            flex items-center justify-center
+            rounded-xl
+            bg-[#1c1c1e]
+            border border-[#2a2a2a]
+        "
                         >
                             <User size={18} className="text-[#c9a34a]" />
                         </button>

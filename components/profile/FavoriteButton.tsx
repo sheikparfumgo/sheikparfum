@@ -22,10 +22,7 @@ export default function FavoriteButton({ productId, size = 18, className = "" }:
         e.preventDefault()
         e.stopPropagation()
 
-        if (!user) {
-            router.push("/login")
-            return
-        }
+        if (!user) return
 
         setLoading(true)
         await toggleFavorite(productId)
@@ -50,8 +47,8 @@ export default function FavoriteButton({ productId, size = 18, className = "" }:
             {loading ? (
                 <Loader2 size={size} className="animate-spin" />
             ) : (
-                <Heart 
-                    size={size} 
+                <Heart
+                    size={size}
                     fill={isFavorite ? "currentColor" : "none"}
                     className={`transition-transform duration-300 ${isFavorite ? "scale-110 animate-bounce-once" : "scale-100"}`}
                 />

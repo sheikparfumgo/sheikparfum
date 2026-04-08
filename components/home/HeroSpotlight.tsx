@@ -3,7 +3,7 @@ import Link from "next/link"
 
 export default function HeroSpotlight() {
     return (
-        <section className="mt-4 md:mt-6">
+        <section className="pt-16">
 
             <div
                 className="
@@ -53,7 +53,7 @@ export default function HeroSpotlight() {
                     </p>
 
                     <Link
-                        href="/perfumes/malek"
+                        href="/perfume/malek-fantasy"
                         className="
             mt-3 md:mt-6
             w-fit

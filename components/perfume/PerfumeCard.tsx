@@ -31,6 +31,8 @@ type PerfumeCardProps = {
     selected?: boolean
     featured?: boolean
     actionLabel?: string
+    youtube_url?: string
+    instagram_url?: string
     onAction?: () => void
 }
 
@@ -45,6 +47,8 @@ export default function PerfumeCard({
     href,
     products = [],
     hasStock = true,
+    youtube_url,
+    instagram_url,
 }: PerfumeCardProps) {
 
     const router = useRouter()
@@ -160,11 +164,7 @@ export default function PerfumeCard({
                         onClick={async (e) => {
                             e.preventDefault()
                             e.stopPropagation()
-                            if (!user) {
-                                localStorage.setItem("pending_favorite", id!)
-                                router.push("/login?redirect=/loja")
-                                return
-                            }
+                            if (!user) return
                             setFavLoading(true)
                             await toggleFavorite(id)
                             setFavLoading(false)
@@ -283,6 +283,46 @@ export default function PerfumeCard({
                         <p className="text-sm text-zinc-500">
                             —
                         </p>
+                    )}
+
+                    {(youtube_url || instagram_url) && (
+                        <div className="flex gap-2 mt-2">
+
+                            {youtube_url && (
+                                <a
+                                    href={youtube_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="
+                    flex items-center gap-1
+                    text-[11px] px-2 py-1 rounded-full
+                    bg-red-500/90 hover:bg-red-600
+                    text-white transition
+                "
+                                >
+                                    <PlayCircle size={14} />
+                                    Review
+                                </a>
+                            )}
+
+                            {instagram_url && (
+                                <a
+                                    href={instagram_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="
+                    text-[11px] px-2 py-1 rounded-full
+                    bg-pink-500/90 hover:bg-pink-600
+                    text-white transition
+                "
+                                >
+                                    Insta
+                                </a>
+                            )}
+
+                        </div>
                     )}
 
                     {selectedProduct?.in_stock ? (

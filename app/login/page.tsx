@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase/client"
 import { Chrome, Mail, Lock, LogIn, UserPlus, ArrowRight, AlertCircle, Loader2 } from "lucide-react"
 
 export default function LoginPage() {
-    const { user, toggleFavorite } = useAuth()
+    const { user, toggleFavorite, loading: authLoading } = useAuth()
     const router = useRouter()
     const [mode, setMode] = useState<"login" | "register">("login")
     const [loading, setLoading] = useState(false)

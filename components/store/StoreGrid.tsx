@@ -50,7 +50,8 @@ export default function StoreGrid({ brand, order, hideOutOfStock, profile }: Pro
             30,
             currentOffset,
             brand ?? undefined,
-            order ?? undefined
+            order ?? undefined,
+            hideOutOfStock
         );
 
         if (reset) {
@@ -66,14 +67,10 @@ export default function StoreGrid({ brand, order, hideOutOfStock, profile }: Pro
 
     useEffect(() => {
         loadPerfumes(true);
-    }, [brand, order]);
+    }, [brand, order, hideOutOfStock]);
 
     // ✅ FILTRO CORRETO (AGORA DENTRO DO COMPONENTE)
     let filteredPerfumes = perfumes;
-
-    if (hideOutOfStock) {
-        filteredPerfumes = filteredPerfumes.filter(p => p.has_stock);
-    }
 
     if (profile) {
         filteredPerfumes = filteredPerfumes.filter(p =>
@@ -130,6 +127,8 @@ export default function StoreGrid({ brand, order, hideOutOfStock, profile }: Pro
                             products={parsedProducts}
                             hasStock={perfume.has_stock}
                             tags={getPerfumeTags(perfume)}
+                            youtube_url={perfume.youtube_url}
+                            instagram_url={perfume.instagram_url}
                         />
                     );
                 })}

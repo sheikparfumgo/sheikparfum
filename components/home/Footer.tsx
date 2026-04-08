@@ -2,7 +2,7 @@ export default function Footer() {
     return (
         <footer className="mt-20 border-t border-zinc-800 bg-[#0F0F10] text-zinc-400">
 
-            <div className="max-w-6xl mx-auto px-6 py-10 grid md:grid-cols-4 gap-8">
+            <div className="max-w-6xl mx-auto px-6 py-10 grid md:grid-cols-4 gap-8 w-full">
 
                 {/* Marca */}
                 <div>
