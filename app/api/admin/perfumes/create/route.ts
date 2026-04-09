@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { resolveBrand } from "@/lib/services/brand";
 import { checkPerfumeExists } from "@/lib/services/perfume";
