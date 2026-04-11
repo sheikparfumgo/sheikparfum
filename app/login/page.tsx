@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
@@ -8,7 +8,7 @@ import { Chrome, Mail, Lock, LogIn, UserPlus, ArrowRight, AlertCircle, Loader2 }
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 
-export default function LoginPage() {
+function LoginContent() {
     const { user, toggleFavorite, loading: authLoading } = useAuth()
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -272,5 +272,17 @@ export default function LoginPage() {
 
             </div>
         </div>
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-[80vh] flex items-center justify-center">
+                <Loader2 className="animate-spin text-[#c9a34a]" size={40} />
+            </div>
+        }>
+            <LoginContent />
+        </Suspense>
     )
 }
