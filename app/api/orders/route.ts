@@ -41,7 +41,6 @@ export async function POST(req: Request) {
 
         // 📦 4. Body
         const body = await req.json()
-
         const {
             items,
             user: userFromBody,
@@ -49,7 +48,8 @@ export async function POST(req: Request) {
             shipping,
             payment_method,
             coupon_id,
-            discount
+            discount,
+            address
         } = body
 
         // 🔒 validações
@@ -89,7 +89,9 @@ export async function POST(req: Request) {
                     payment_method: payment_method || "unknown",
 
                     status: "pending",
-                    items_json: items
+                    items_json: items,
+
+                    address_json: address || {}
                 }
             ])
             .select()

@@ -143,7 +143,7 @@ export default function ListaPage() {
             <div className="max-w-2xl mx-auto py-16 text-center">
                 <h1 className="text-3xl text-white">Faça login para acessar seu arsenal</h1>
                 <button
-                    onClick={() => router.push("/login")}
+                    onClick={() => router.push("/login?redirect=/lista")}
                     className="mt-6 px-6 py-3 bg-[#c9a34a] text-black rounded-lg"
                 >
                     Entrar

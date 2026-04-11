@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import PerfumeCard from "@/components/perfume/PerfumeCard"
+import { supabase } from "@/lib/supabase/client"
 
 export default function RecommendedSection() {
 
@@ -10,13 +11,24 @@ export default function RecommendedSection() {
     const [data, setData] = useState<any[]>([])
 
     useEffect(() => {
-        if (!user) return
+        async function load() {
+            if (!user) return
 
-        fetch("/api/recommendations/by-user", {
-            headers: { "x-user-id": user.id }
-        })
-            .then(res => res.json())
-            .then(setData)
+            const {
+                data: { session }
+            } = await supabase.auth.getSession()
+
+            const res = await fetch("/api/recommendations/by-user", {
+                headers: {
+                    Authorization: `Bearer ${session?.access_token}`
+                }
+            })
+
+            const data = await res.json()
+            setData(data)
+        }
+
+        load()
     }, [user])
 
     if (!user || data.length === 0) return null

@@ -1,65 +1,188 @@
 "use client"
 
-import { useState } from "react"
-import PerfumeCard from "@/components/perfume/PerfumeCard"
-
-type Plan = "explorador" | "connaisseur" | "sheikh"
+import { useState, useEffect } from "react"
+import ClubPerfumeCard from "@/components/club/ClubPerfumeCard"
+import { supabase } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
 type Perfume = {
-    id: number
+    id: string
     name: string
-    brand: string
     image: string
-    hype?: boolean
-    youtube_url?: string
-    instagram_url?: string
+    gender: string
 }
 
 export default function ClubeDashboard() {
 
-    const userPlan: Plan = "connaisseur"
+    const [chosenPerfume, setChosenPerfume] = useState<string | null>(null)
+    const [choosing, setChoosing] = useState(false)
 
-    const [chosenPerfume, setChosenPerfume] = useState<number | null>(null)
+    const [male, setMale] = useState<Perfume[]>([])
+    const [female, setFemale] = useState<Perfume[]>([])
+    const [loading, setLoading] = useState(true)
 
-    const perfumes: Perfume[] = [
-        {
-            id: 1,
-            name: "Layton",
-            brand: "Parfums de Marly",
-            image: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539",
-            hype: true
-        },
-        {
-            id: 2,
-            name: "Stronger With You",
-            brand: "Armani",
-            image: "https://images.unsplash.com/photo-1585386959984-a4155224a1ad"
-        },
-        {
-            id: 3,
-            name: "Le Male Le Parfum",
-            brand: "Jean Paul Gaultier",
-            image: "https://images.unsplash.com/photo-1619994403073-b7a4ba5fcccd"
-        },
-        {
-            id: 4,
-            name: "Eros Flame",
-            brand: "Versace",
-            image: "https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd"
-        },
-        {
-            id: 5,
-            name: "The One",
-            brand: "Dolce & Gabbana",
-            image: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519"
+    const [tab, setTab] = useState<"male" | "female" | "suggestions">("male")
+    const [selectedPerfume, setSelectedPerfume] = useState<string | null>(null)
+
+    // 🔥 mês dinâmico bonito
+    const monthLabel = new Date()
+        .toLocaleDateString("pt-BR", { month: "long" })
+        .replace(/^./, c => c.toUpperCase())
+
+    useEffect(() => {
+        async function load() {
+            try {
+                setLoading(true)
+
+                const {
+                    data: { session }
+                } = await supabase.auth.getSession()
+
+                const res = await fetch("/api/club/monthly", {
+                    headers: {
+                        Authorization: `Bearer ${session?.access_token}`
+                    }
+                })
+
+                if (!res.ok) {
+                    console.log("STATUS:", res.status)
+                    toast.error("Erro ao carregar perfumes do clube")
+                    return
+                }
+
+                const json = await res.json()
+
+                if (!json.success) {
+                    toast.error("Erro ao carregar perfumes do clube")
+                    return
+                }
+
+                setMale(json.data.male || [])
+                setFemale(json.data.female || [])
+
+            } catch (err) {
+                toast.error("Erro inesperado ao carregar perfumes")
+            } finally {
+                setLoading(false)
+            }
         }
-    ]
 
-    function canChoose(perfume: Perfume) {
-        if (perfume.hype && userPlan !== "sheikh") {
-            return false
+        load()
+    }, [])
+
+    async function handleChoose(perfumeId: string) {
+
+        if (choosing) return
+        setChoosing(true)
+
+        const {
+            data: { session }
+        } = await supabase.auth.getSession()
+
+        const res = await fetch("/api/club/choose", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session?.access_token}`
+            },
+            body: JSON.stringify({
+                perfume_id: perfumeId
+            })
+        })
+
+        let data: any = {}
+
+        try {
+            data = await res.json()
+        } catch { }
+
+        if (!res.ok) {
+            toast.error(data.error || "Erro ao escolher perfume")
+            setChoosing(false)
+            return
         }
-        return true
+
+        toast.success("Escolha confirmada! 👑")
+
+        setChosenPerfume(perfumeId)
+        setSelectedPerfume(null)
+        setChoosing(false)
+    }
+
+    function Grid({
+        perfumes,
+        chosenPerfume,
+        handleChoose
+    }: {
+        perfumes: Perfume[]
+        chosenPerfume: string | null
+        handleChoose: (id: string) => void
+    }) {
+        return (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5">
+                {perfumes.map((perfume) => (
+                    <ClubPerfumeCard
+                        key={perfume.id}
+                        id={perfume.id}
+                        name={perfume.name}
+                        image={perfume.image}
+                        selected={
+                            chosenPerfume === perfume.id ||
+                            selectedPerfume === perfume.id
+                        }
+                        disabled={
+                            !!chosenPerfume
+                                ? perfume.id !== chosenPerfume
+                                : !!selectedPerfume && selectedPerfume !== perfume.id
+                        }
+                        onSelect={() => {
+                            if (chosenPerfume) return
+
+                            if (selectedPerfume === perfume.id) {
+                                setSelectedPerfume(null) // 🔥 DESMARCAR
+                            } else {
+                                setSelectedPerfume(perfume.id)
+                            }
+                        }}
+                    />
+                ))}
+            </div>
+        )
+    }
+
+    function SuggestionsTab() {
+        const [suggestion, setSuggestion] = useState("")
+
+        return (
+            <div className="space-y-4 mt-4">
+
+                <h3 className="text-lg font-semibold">
+                    Sugira um perfume 👇
+                </h3>
+
+                <input
+                    value={suggestion}
+                    onChange={(e) => setSuggestion(e.target.value)}
+                    placeholder="Ex: Asad Lattafa"
+                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-4 py-3 text-sm"
+                />
+
+                <button className="
+bg-transparent
+border border-[#D4AF37]
+text-[#D4AF37]
+px-4 py-2
+rounded-lg
+text-sm font-semibold
+hover:bg-[#D4AF37]/10
+hover:shadow-[0_0_10px_rgba(212,175,55,0.3)]
+transition
+">
+                    Enviar sugestão
+                </button>
+
+            </div >
+        )
     }
 
     return (
@@ -68,19 +191,13 @@ export default function ClubeDashboard() {
             {/* HEADER */}
 
             <div>
-
                 <h1 className="text-3xl font-bold mb-1">
                     Clube do Sheik
                 </h1>
 
-                <p className="text-sm text-primary font-semibold">
-                    Plano atual: {userPlan}
-                </p>
-
                 <p className="text-zinc-400 mt-1">
-                    Perfumes do mês • Maio
+                    Perfumes do mês • {monthLabel}
                 </p>
-
             </div>
 
             {/* STATUS */}
@@ -88,7 +205,6 @@ export default function ClubeDashboard() {
             <div className="border border-[#2a2a2a] rounded-xl p-6 bg-[#161617] space-y-3">
 
                 {chosenPerfume === null ? (
-
                     <>
                         <div className="flex items-center gap-3">
                             <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse" />
@@ -101,9 +217,7 @@ export default function ClubeDashboard() {
                             Você pode escolher <span className="text-primary font-semibold">1 perfume</span> este mês.
                         </p>
                     </>
-
                 ) : (
-
                     <>
                         <div className="flex items-center gap-3">
                             <div className="w-3 h-3 bg-green-400 rounded-full" />
@@ -116,7 +230,6 @@ export default function ClubeDashboard() {
                             Envio previsto em até 5 dias.
                         </p>
                     </>
-
                 )}
 
             </div>
@@ -132,115 +245,77 @@ export default function ClubeDashboard() {
                 <p className="text-sm text-zinc-400 mb-6">
                     Escolha <span className="text-primary font-semibold">sua fragrância</span> para experimentar este mês.
                 </p>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5">
-
-                    {perfumes.map((perfume) => {
-
-                        const locked = !canChoose(perfume)
-
-                        return (
-
-                            <PerfumeCard
-                                key={perfume.id}
-                                id={String(perfume.id)}
-                                name={perfume.name}
-                                brand={perfume.brand}
-                                image={perfume.image}
-                                hype={perfume.hype}
-                                locked={locked}
-                                selected={chosenPerfume === perfume.id}
-                                featured={perfume.id === 2}
-                                actionLabel="Escolher"
-                                onAction={() => setChosenPerfume(perfume.id)}
-                                youtube_url={perfume.youtube_url}
-                                instagram_url={perfume.instagram_url}
-                            />
-
-                        )
-
-                    })}
-
+                <div className="flex gap-2 bg-[#1a1a1a] border border-[#2a2a2a] p-1 rounded-xl w-fit mb-6">
+                    {[
+                        { key: "male", label: "Masculino" },
+                        { key: "female", label: "Feminino" },
+                        { key: "suggestions", label: "Sugestões" }
+                    ].map((t) => (
+                        <button
+                            key={t.key}
+                            onClick={() => setTab(t.key as any)}
+                            className={`
+px-4 py-2 text-sm rounded-lg transition-all duration-200
+${tab === t.key
+                                    ? "border border-[#D4AF37] text-[#D4AF37] bg-[#111]"
+                                    : "text-zinc-400 hover:text-white"}
+`}
+                        >
+                            {t.label}
+                        </button>
+                    ))}
                 </div>
-
-            </div>
-
-            {/* PULAR MÊS */}
-
-            <div className="border border-[#2a2a2a] rounded-xl p-6 bg-[#161617] space-y-3">
-
-                <h2 className="text-lg font-semibold">
-                    Pular mês
-                </h2>
-
-                <p className="text-sm text-zinc-400 leading-relaxed">
-
-                    Caso você não queira escolher um perfume este mês, pode pular a escolha.
-
-                    No mês seguinte você poderá escolher mais fragrâncias:
-
-                </p>
-
-                <ul className="text-sm text-zinc-400 list-disc ml-5 space-y-1">
-
-                    <li>
-                        Plano Connaisseur: até <span className="text-primary font-semibold">4 perfumes</span>
-                    </li>
-
-                    <li>
-                        Plano Sheikh: até <span className="text-primary font-semibold">5 perfumes</span>
-                    </li>
-
-                    <li>
-                        Não é permitido escolher mais de 1 unidade do mesmo perfume.
-                    </li>
-
-                </ul>
-
-                <p className="text-xs text-zinc-500">
-
-                    O objetivo do clube é conhecer novas fragrâncias e expandir sua coleção olfativa.
-
-                </p>
-
-                <button
-                    className="
-          mt-3
-          bg-zinc-800
-          border border-zinc-700
-          text-sm
-          px-4
-          py-2
-          rounded-lg
-          hover:border-primary
-          transition
-          "
-                >
-                    Pular este mês
-                </button>
-
-            </div>
-
-            {/* HISTÓRICO */}
-
-            <div>
-
-                <h2 className="text-xl font-bold mb-4">
-                    Histórico
-                </h2>
-
-                <div className="border border-[#2a2a2a] rounded-xl p-6 bg-[#161617] space-y-1">
-
+                {/* LOADING */}
+                {loading && (
                     <p className="text-zinc-400 text-sm">
-                        Março • Layton
+                        Carregando perfumes...
                     </p>
+                )}
 
-                    <p className="text-zinc-400 text-sm">
-                        Abril • Le Male Le Parfum
+                {/* EMPTY */}
+                {!loading && male.length === 0 && female.length === 0 && (
+                    <p className="text-zinc-500 text-sm">
+                        Nenhum perfume disponível este mês.
                     </p>
+                )}
 
-                </div>
+                {tab === "male" && <Grid
+                    perfumes={male}
+                    chosenPerfume={chosenPerfume}
+                    handleChoose={handleChoose}
+                />}
 
+                {tab === "female" && <Grid
+                    perfumes={female}
+                    chosenPerfume={chosenPerfume}
+                    handleChoose={handleChoose}
+                />}
+
+                {tab === "suggestions" && <SuggestionsTab />}
+
+                {selectedPerfume && !chosenPerfume && tab !== "suggestions" && (
+                    <div className="mt-6 flex justify-center">
+
+                        <button
+                            disabled={choosing}
+                            onClick={() => handleChoose(selectedPerfume)}
+                            className="
+    bg-transparent
+    border border-[#D4AF37]
+    text-[#D4AF37]
+    px-6 py-3
+    rounded-xl
+    text-sm font-semibold
+    hover:bg-[#D4AF37]/10
+    transition
+    disabled:opacity-50
+"
+                        >
+                            {choosing ? "Confirmando..." : "Confirmar escolha"}
+                        </button>
+
+                    </div>
+                )}
             </div>
 
         </div>

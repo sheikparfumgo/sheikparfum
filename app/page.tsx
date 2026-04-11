@@ -1,5 +1,5 @@
 import HeroSpotlight from "@/components/home/HeroSpotlight"
-import InfoCarousel from "@/components/home/InfoCarousel"
+import HeroCarousel from "@/components/home/HeroCarousel"
 import RecommendedSection from "@/components/home/RecommendedSection"
 import BestSellersSection from "@/components/home/BestSellersSection"
 
@@ -10,7 +10,7 @@ export default function Home() {
       <main>
 
         <HeroSpotlight />
-        <InfoCarousel />
+        <HeroCarousel />
 
         <RecommendedSection />
         <BestSellersSection />

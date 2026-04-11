@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth"
 import Link from "next/link"
 import confetti from "canvas-confetti"
 import PerfumeCard from "@/components/perfume/PerfumeCard"
+import { supabase } from "@/lib/supabase/client"
 
 type Slide = {
     title?: string
@@ -57,7 +58,6 @@ export default function HeroCarousel() {
     const [step, setStep] = useState(1)
     const [answers, setAnswers] = useState<any>({})
     const [quizFinished, setQuizFinished] = useState(false)
-    const resultsRef = useRef<HTMLDivElement | null>(null)
     const { user } = useAuth()
 
     const onSelect = useCallback(() => {
@@ -99,7 +99,13 @@ export default function HeroCarousel() {
     }, [quizFinished])
 
     useEffect(() => {
-        const handler = () => setOpenQuiz(true)
+        const handler = (e: any) => {
+            setOpenQuiz(true)
+
+            setQuizFinished(false)
+            setAnswers({})
+            setStep(e.detail?.step || 1)
+        }
 
         window.addEventListener("openQuiz", handler)
 
@@ -109,9 +115,9 @@ export default function HeroCarousel() {
     useEffect(() => {
         if (quizFinished) {
             setTimeout(() => {
-                resultsRef.current?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start"
+                window.scrollTo({
+                    top: document.body.scrollHeight,
+                    behavior: "smooth"
                 })
             }, 300)
         }
@@ -142,21 +148,27 @@ export default function HeroCarousel() {
 
     async function saveQuiz(result: any) {
 
-        await fetch("/api/profile/quiz", {
+        const {
+            data: { session }
+        } = await supabase.auth.getSession()
+
+        await fetch("/api/profile/olfactive", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session?.access_token}`
             },
             body: JSON.stringify({
-                ...result,
-                userId: user?.id
+                olfactive_profile: result
             })
         })
 
         setQuizFinished(true)
 
         window.dispatchEvent(
-            new CustomEvent("quizCompleted")
+            new CustomEvent("quizCompleted", {
+                detail: { completed: true }
+            })
         )
     }
 
@@ -173,7 +185,7 @@ export default function HeroCarousel() {
                                 if (slide.action === "quiz") {
 
                                     if (!user) {
-                                        window.location.href = "/login"
+                                        window.location.href = "/login?redirect=/perfil"
                                         return
                                     }
 

@@ -7,7 +7,13 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await supabase
         .from("vw_perfumes_catalog")
-        .select("perfume_id, perfume_name, brand")
+        .select(`
+            perfume_id,
+            perfume_name,
+            brand,
+            image_main,
+            gender
+        `)
         .order("perfume_name", { ascending: true })
         .range(0, 5000);
 
@@ -23,7 +29,11 @@ export async function GET(req: NextRequest) {
         data: data.map(p => ({
             id: p.perfume_id,
             perfume_name: p.perfume_name,
-            brand: p.brand
+            brand: p.brand,
+
+            // 🔥 NOVOS CAMPOS (sem quebrar nada)
+            image_main: p.image_main,
+            gender: p.gender
         }))
     });
 }

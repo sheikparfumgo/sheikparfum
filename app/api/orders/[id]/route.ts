@@ -1,58 +1,55 @@
-import { supabaseAdmin } from "@/lib/supabase/admin"
 import { NextRequest, NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
 
-export async function PATCH(
+export async function GET(
     req: NextRequest,
     context: { params: Promise<{ id: string }> }
 ) {
     try {
         const { id } = await context.params
-        const body = await req.json()
 
-        const { status } = body
+        const authHeader = req.headers.get("authorization")
 
-        const allowedStatus = ["pending", "paid", "shipped", "delivered", "canceled"]
-
-        if (!allowedStatus.includes(status)) {
-            return NextResponse.json(
-                { error: "Status inválido" },
-                { status: 400 }
-            )
+        if (!authHeader) {
+            return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
         }
 
-        const { data: order, error } = await supabaseAdmin
+        const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                global: {
+                    headers: {
+                        Authorization: authHeader
+                    }
+                }
+            }
+        )
+
+        const {
+            data: { user },
+            error: userError
+        } = await supabase.auth.getUser()
+
+        if (userError || !user) {
+            return NextResponse.json({ error: "Usuário inválido" }, { status: 401 })
+        }
+
+        const { data, error } = await supabase
             .from("orders")
-            .update({ status })
+            .select("*")
             .eq("id", id)
-            .select()
+            .eq("user_id", user.id) // 🔥 SEGURANÇA
             .single()
 
-        if (error) {
-            console.error(error)
-            return NextResponse.json(
-                { error: "Erro ao atualizar pedido" },
-                { status: 500 }
-            )
+        if (error || !data) {
+            return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
         }
 
-        // 🔥 AQUI É O OURO DO SISTEMA
-        if (status === "paid" && order.coupon_id) {
-            await supabaseAdmin.rpc("increment_coupon_usage", {
-                coupon_id_input: order.coupon_id
-            })
-        }
-
-        return NextResponse.json({
-            success: true,
-            order
-        })
+        return NextResponse.json(data)
 
     } catch (err) {
         console.error(err)
-
-        return NextResponse.json(
-            { error: "Erro interno" },
-            { status: 500 }
-        )
+        return NextResponse.json({ error: "Erro interno" }, { status: 500 })
     }
 }

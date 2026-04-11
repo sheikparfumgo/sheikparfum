@@ -111,54 +111,49 @@ export default function CheckoutPage() {
             })
 
             const data = await res.json()
-            setAddresses(data.addresses || [])
-        }
+            const list = data.addresses || []
 
-        loadAddresses()
-    }, [])
+            setAddresses(list)
 
-    useEffect(() => {
-        async function loadAddress() {
-            const {
-                data: { session }
-            } = await supabase.auth.getSession()
-
-            if (!session?.access_token) return
-
-            const res = await fetch("/api/address/me", {
-                headers: {
-                    Authorization: `Bearer ${session.access_token}`
+            if (!list.length) {
+                // fallback Zustand
+                if (savedAddress) {
+                    setAddress({
+                        cep: savedAddress.cep || "",
+                        street: savedAddress.street || "",
+                        city: savedAddress.city || "",
+                        state: savedAddress.state || "",
+                        number: savedAddress.number || "",
+                        complement: savedAddress.complement || ""
+                    })
                 }
-            })
-
-            const data = await res.json()
-
-            if (!data.address) return
-
-            const addr = data.address
-
-            const formatted = {
-                cep: addr.zip_code || "", // 🔥 ajuste correto
-                street: addr.street || "",
-                city: addr.city || "",
-                state: addr.state || "",
-                number: addr.number || "",
-                complement: addr.complement || ""
+                return
             }
 
-            // endereço
+            // 🔥 PRIORIDADE: default → primeiro
+            const selected =
+                list.find((a: any) => a.is_default) || list[0]
+
+            const formatted = {
+                cep: selected.zip_code || "",
+                street: selected.street || "",
+                city: selected.city || "",
+                state: selected.state || "",
+                number: selected.number || "",
+                complement: selected.complement || ""
+            }
+
             setAddress(formatted)
             setAddressGlobal(formatted)
 
-            // 🔥 DADOS DO USUÁRIO
             setUser((prev) => ({
                 ...prev,
-                name: prev.name || addr.recipient_name,
-                phone: addr.phone || prev.phone
+                name: prev.name || selected.recipient_name,
+                phone: prev.phone || selected.phone
             }))
         }
 
-        loadAddress()
+        loadAddresses()
     }, [])
 
     useEffect(() => {
@@ -230,25 +225,6 @@ export default function CheckoutPage() {
         return () => clearInterval(interval)
     }, [])
 
-    useEffect(() => {
-        if (savedAddress?.cep && !address.cep) {
-            handleCep(savedAddress.cep)
-        }
-    }, [savedAddress])
-
-    useEffect(() => {
-        if (savedAddress) {
-            setAddress({
-                cep: savedAddress.cep || "",
-                street: savedAddress.street || "",
-                city: savedAddress.city || "",
-                state: savedAddress.state || "",
-                number: savedAddress.number || "",
-                complement: savedAddress.complement || "",
-            })
-        }
-    }, [savedAddress])
-
     function formatTime(seconds: number) {
         const min = Math.floor(seconds / 60)
         const sec = seconds % 60
@@ -316,7 +292,19 @@ export default function CheckoutPage() {
                 items,
                 user,
                 shipping,
-                payment_method: paymentMethod // ✅ AGORA DINÂMICO
+                payment_method: paymentMethod,
+
+                // ✅ NOVO
+                address: {
+                    street: address.street,
+                    number: address.number,
+                    complement: address.complement,
+                    city: address.city,
+                    state: address.state,
+                    zip_code: address.cep,
+                    recipient_name: user.name,
+                    phone: user.phone
+                }
             })
         })
 

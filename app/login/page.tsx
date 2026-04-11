@@ -5,14 +5,18 @@ import { useAuth } from "@/hooks/useAuth"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
 import { Chrome, Mail, Lock, LogIn, UserPlus, ArrowRight, AlertCircle, Loader2 } from "lucide-react"
+import { useSearchParams } from "next/navigation"
+import { toast } from "sonner"
 
 export default function LoginPage() {
     const { user, toggleFavorite, loading: authLoading } = useAuth()
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const redirectTo = searchParams.get("redirect") || "/perfil"
     const [mode, setMode] = useState<"login" | "register">("login")
     const [loading, setLoading] = useState(false)
     const [socialLoading, setSocialLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
+
 
     // Form states
     const [email, setEmail] = useState("")
@@ -20,47 +24,88 @@ export default function LoginPage() {
 
     const handleGoogleLogin = async () => {
         setSocialLoading(true)
-        setError(null)
         try {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
-                    redirectTo: `${window.location.origin}/perfil`
+                    redirectTo: `${window.location.origin}${redirectTo}`,
+                    queryParams: {
+                        prompt: "select_account"
+                    }
                 }
             })
             if (error) throw error
         } catch (err: any) {
-            setError(err.message)
+            toast.error(err.message)
             setSocialLoading(false)
         }
+    }
+
+    const handleForgotPassword = async () => {
+        if (!email) {
+            toast.error("Digite seu e-mail primeiro.")
+            return
+        }
+
+        setLoading(true)
+
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`
+        })
+
+        if (error) {
+            toast.error(error.message)
+        } else {
+            toast.success("Enviamos um link para seu e-mail")
+        }
+
+        setLoading(false)
     }
 
     const handleEmailAuth = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
-        setError(null)
 
         try {
             if (mode === "login") {
-                const { error } = await supabase.auth.signInWithPassword({
+                const { error: loginError } = await supabase.auth.signInWithPassword({
                     email,
                     password
                 })
-                if (error) throw error
-                router.push("/perfil")
+
+                if (loginError) {
+                    console.warn("Login automático falhou, mas usuário pode já estar autenticado")
+                }
+
+                toast.success("Login realizado!")
+
+                router.push(redirectTo)
+                router.refresh()
             } else {
                 const { error } = await supabase.auth.signUp({
                     email,
                     password,
-                    options: {
-                        emailRedirectTo: `${window.location.origin}/perfil`
-                    }
                 })
+
                 if (error) throw error
-                setError("Verifique seu e-mail para confirmar o cadastro.")
+
+                // login automático
+                await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                })
+
+                toast.success("Conta criada com sucesso!")
+
+                router.push(redirectTo)
+                router.refresh()
             }
         } catch (err: any) {
-            setError(err.message === "Invalid login credentials" ? "E-mail ou senha incorretos." : err.message)
+            toast.error(
+                err.message === "Invalid login credentials"
+                    ? "E-mail ou senha incorretos."
+                    : err.message
+            )
         } finally {
             setLoading(false)
         }
@@ -145,22 +190,16 @@ export default function LoginPage() {
                         {/* Email Form */}
                         <form onSubmit={handleEmailAuth} className="space-y-4">
 
-                            {error && (
-                                <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-xs">
-                                    <AlertCircle size={14} />
-                                    <span>{error}</span>
-                                </div>
-                            )}
-
                             <div className="space-y-4">
                                 <div className="space-y-1">
                                     <div className="relative">
-                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                                        <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 peer-focus:text-[#c9a34a]" />
+
                                         <input
                                             type="email"
                                             required
                                             placeholder="Seu melhor e-mail"
-                                            className="input-premium pl-12 h-14"
+                                            className="input-premium pl-14 h-14 bg-[#111112] relative z-10 peer"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
                                         />
@@ -169,12 +208,13 @@ export default function LoginPage() {
 
                                 <div className="space-y-1">
                                     <div className="relative">
-                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                                        <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 z-0" size={16} />
+
                                         <input
                                             type="password"
                                             required
                                             placeholder="Sua senha secreta"
-                                            className="input-premium pl-12 h-14"
+                                            className="input-premium pl-14 h-14 bg-[#111112] relative z-10"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                         />
@@ -182,6 +222,7 @@ export default function LoginPage() {
                                     <div className="flex justify-end">
                                         <button
                                             type="button"
+                                            onClick={handleForgotPassword}
                                             className="text-[11px] text-[#c9a34a] hover:underline"
                                         >
                                             Esqueci minha senha
@@ -192,8 +233,8 @@ export default function LoginPage() {
 
                             <button
                                 type="submit"
-                                disabled={loading || socialLoading}
-                                className="btn-primary h-14 flex items-center justify-center gap-2 text-sm uppercase tracking-widest disabled:opacity-50"
+                                disabled={loading || socialLoading || !email || !password}
+                                className="btn-primary hover:scale-[1.02] active:scale-[0.98] transition-all h-14 flex items-center justify-center gap-2 text-sm uppercase tracking-widest disabled:opacity-50"
                             >
                                 {loading ? (
                                     <Loader2 className="animate-spin" size={20} />

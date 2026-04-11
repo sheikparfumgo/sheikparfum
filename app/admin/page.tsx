@@ -10,6 +10,7 @@ import CouponsTab from "@/components/admin/tabs/CouponsTab"
 import AddPerfumeTab from "@/components/admin/tabs/AddPerfumeTab"
 import AddReviewTab from "@/components/admin/tabs/AddReviewTab"
 import EditPerfumeTab from "@/components/admin/tabs/EditPerfumeTab"
+import ClubTab from "@/components/admin/tabs/ClubTab"
 
 export default function AdminPageV2() {
 
@@ -253,9 +254,11 @@ export default function AdminPageV2() {
                     { id: "dashboard", label: "Dashboard" },
                     { id: "stock", label: "Estoque" },
                     { id: "coupons", label: "Cupons" },
+                    { id: "club", label: "Clube" },
                     { id: "add", label: "Adicionar Perfume" },
                     { id: "reviews", label: "Reviews" },
                     { id: "edit", label: "Editar Perfume" }
+
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -302,6 +305,10 @@ export default function AdminPageV2() {
                     invalidateCoupon={invalidateCoupon}
                     groupedProducts={groupedProducts}
                 />
+            )}
+
+            {activeTab === "club" && (
+                <ClubTab />
             )}
 
             {activeTab === "add" && (

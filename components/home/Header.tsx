@@ -506,7 +506,7 @@ export default function Header() {
                     ) : (
 
                         <button
-                            onClick={() => router.push("/login")}
+                            onClick={() => router.push("/login?redirect=/perfil")}
                             className="
             md:hidden
             w-10 h-10
